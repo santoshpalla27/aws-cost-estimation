@@ -1,247 +1,204 @@
-import { useState, useEffect } from 'react';
-import { ServiceSchema, ServiceFormState, CostEstimate } from '@types/schema.types';
-import { dependencyEngine } from '@engine/dependency.engine';
-import { usageEngine } from '@engine/usage.engine';
-import { calculatorEngine } from '@engine/calculator.engine';
-import { pricingEngine } from '@engine/pricing.engine';
+import React, { useState, useEffect } from 'react';
+import { SchemaEngine, FormState } from '@/schema/schema.engine';
+import { UsageEngine, UsagePreset } from '@/engine/usage.engine';
 import DynamicField from './DynamicField';
 import UsageSlider from './UsageSlider';
+import './ServiceConfigurator.css';
+import './ServiceConfiguratorEnhanced.css';
+import './PresetButtons.css';
 
 interface ServiceConfiguratorProps {
-    schema: ServiceSchema;
-    region: string;
-    onEstimateUpdate: (estimate: CostEstimate) => void;
+    schemaEngine: SchemaEngine;
+    usageEngine: UsageEngine;
+    onCalculate: (formState: FormState) => void;
 }
 
-function ServiceConfigurator({ schema, region, onEstimateUpdate }: ServiceConfiguratorProps) {
-    const [formState, setFormState] = useState<ServiceFormState>({
-        service: schema.service,
-        region,
-        fields: {},
-        usage: {},
-    });
-
-    const [activeGroup, setActiveGroup] = useState<string | null>(
-        schema.groups?.find(g => g.defaultExpanded)?.id || schema.groups?.[0]?.id || null
+const ServiceConfigurator: React.FC<ServiceConfiguratorProps> = ({
+    schemaEngine,
+    usageEngine,
+    onCalculate,
+}) => {
+    const [formState, setFormState] = useState<FormState>(() =>
+        schemaEngine.getDefaultFormState()
     );
+    const [usageState, setUsageState] = useState(() => usageEngine.getState());
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-    // Initialize form with defaults
+    const schema = schemaEngine.getSchema();
+    const groups = schemaEngine.getVisibleGroups(formState);
+    const dimensions = usageEngine.getDimensions();
+
+    // Auto-calculate on state changes
     useEffect(() => {
-        const initialFields: Record<string, unknown> = {};
-
-        schema.fields.forEach(field => {
-            if (field.default !== undefined) {
-                initialFields[field.id] = field.default;
-            }
-        });
-
-        setFormState(prev => ({
-            ...prev,
-            fields: initialFields,
-            service: schema.service,
-            region,
-        }));
-
-        // Initialize usage engine
-        usageEngine.initialize(schema.usage);
-        setFormState(prev => ({
-            ...prev,
-            usage: usageEngine.getUsageState(),
-        }));
-    }, [schema, region]);
-
-    // Recalculate costs when form or usage changes
-    useEffect(() => {
-        calculateCosts();
-    }, [formState]);
-
-    const calculateCosts = async () => {
-        try {
-            // For demo purposes, we'll use mock pricing data
-            // In production, this would load from static JSON files
-            const mockPricingRecords = new Map();
-
-            const estimate = await calculatorEngine.calculate(
-                schema.service,
-                region,
-                formState,
-                formState.usage,
-                schema.formulas,
-                mockPricingRecords
-            );
-
-            onEstimateUpdate(estimate);
-        } catch (error) {
-            console.error('Cost calculation error:', error);
-        }
-    };
+        onCalculate(formState);
+    }, [formState, usageState]);
 
     const handleFieldChange = (fieldId: string, value: unknown) => {
-        setFormState(prev => ({
+        setFormState((prev) => ({
             ...prev,
-            fields: {
-                ...prev.fields,
-                [fieldId]: value,
-            },
+            [fieldId]: value,
         }));
     };
 
     const handleUsageChange = (dimensionId: string, value: number) => {
-        usageEngine.setUsage(dimensionId, value);
-        setFormState(prev => ({
-            ...prev,
-            usage: usageEngine.getUsageState(),
-        }));
+        usageEngine.setValue(dimensionId, value);
+        setUsageState(usageEngine.getState());
     };
 
-    const applyUsageProfile = (profile: 'low' | 'medium' | 'high') => {
-        usageEngine.applyProfile(profile);
-        setFormState(prev => ({
-            ...prev,
-            usage: usageEngine.getUsageState(),
-        }));
+    const handleUsagePreset = (preset: UsagePreset) => {
+        usageEngine.applyPreset(preset);
+        setUsageState(usageEngine.getState());
     };
 
-    const getFieldsByGroup = (groupId: string) => {
-        const group = schema.groups?.find(g => g.id === groupId);
-        if (!group) return [];
-
-        return schema.fields.filter(field => group.fields.includes(field.id));
-    };
-
-    const getUngroupedFields = () => {
-        if (!schema.groups || schema.groups.length === 0) {
-            return schema.fields;
-        }
-
-        const groupedFieldIds = new Set(
-            schema.groups.flatMap(g => g.fields)
-        );
-
-        return schema.fields.filter(field => !groupedFieldIds.has(field.id));
+    const toggleGroup = (groupId: string) => {
+        setExpandedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+            return next;
+        });
     };
 
     return (
-        <div>
-            {/* Service Info */}
-            <div className="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <div className="card-header">
-                    <div>
-                        <h2 className="card-title">{schema.metadata.displayName}</h2>
-                        <p style={{ margin: 0, color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
-                            {schema.metadata.description}
-                        </p>
-                    </div>
-                    <span className="badge badge-primary">{schema.metadata.category}</span>
-                </div>
+        <div className="service-configurator">
+            <div className="configurator-header">
+                <h2>{schema.metadata.displayName}</h2>
+                <p className="description">{schema.metadata.description}</p>
             </div>
 
             {/* Configuration Fields */}
-            <div className="card" style={{ marginBottom: 'var(--spacing-lg)' }}>
-                <div className="card-header">
-                    <h3 className="card-title">Configuration</h3>
-                </div>
+            <div className="configuration-section">
+                <h3>Configuration</h3>
 
-                {schema.groups && schema.groups.length > 0 ? (
-                    <div>
-                        {schema.groups.map(group => {
-                            const isActive = activeGroup === group.id;
-                            const fields = getFieldsByGroup(group.id);
+                {groups.length > 0 ? (
+                    groups.map((group) => {
+                        const isExpanded = expandedGroups.has(group.id) || group.defaultExpanded;
+                        const groupFields = group.fields
+                            .map((fieldId) => schemaEngine.getField(fieldId))
+                            .filter((field) => field && schemaEngine.isFieldVisible(field.id, formState));
 
-                            return (
-                                <div key={group.id} style={{ marginBottom: 'var(--spacing-md)' }}>
-                                    <button
-                                        className="btn"
-                                        style={{ width: '100%', justifyContent: 'space-between' }}
-                                        onClick={() => setActiveGroup(isActive ? null : group.id)}
-                                    >
-                                        <span>{group.label}</span>
-                                        <span>{isActive ? '▼' : '▶'}</span>
-                                    </button>
+                        if (groupFields.length === 0) return null;
 
-                                    {isActive && (
-                                        <div style={{ marginTop: 'var(--spacing-md)', paddingLeft: 'var(--spacing-md)' }}>
-                                            {group.description && (
-                                                <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-md)' }}>
-                                                    {group.description}
-                                                </p>
-                                            )}
+                        return (
+                            <div key={group.id} className="field-group">
+                                <button
+                                    className="group-header"
+                                    onClick={() => toggleGroup(group.id)}
+                                    aria-expanded={isExpanded}
+                                >
+                                    <span className="group-title">{group.label}</span>
+                                    <span className={`group-icon ${isExpanded ? 'expanded' : ''}`}>
+                                        ▼
+                                    </span>
+                                </button>
 
-                                            {fields.map(field => (
-                                                <DynamicField
-                                                    key={field.id}
-                                                    field={field}
-                                                    value={formState.fields[field.id]}
-                                                    formState={formState}
-                                                    onChange={(value) => handleFieldChange(field.id, value)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                {group.description && (
+                                    <p className="group-description">{group.description}</p>
+                                )}
 
-                        {/* Ungrouped fields */}
-                        {getUngroupedFields().map(field => (
-                            <DynamicField
-                                key={field.id}
-                                field={field}
-                                value={formState.fields[field.id]}
-                                formState={formState}
-                                onChange={(value) => handleFieldChange(field.id, value)}
-                            />
-                        ))}
-                    </div>
+                                {isExpanded && (
+                                    <div className="group-fields">
+                                        {groupFields.map((field) => (
+                                            <DynamicField
+                                                key={field!.id}
+                                                field={field!}
+                                                value={formState[field!.id]}
+                                                onChange={(value) => handleFieldChange(field!.id, value)}
+                                                formState={formState}
+                                                schemaEngine={schemaEngine}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 ) : (
-                    <div>
-                        {schema.fields.map(field => (
+                    // No groups - render all visible fields
+                    <div className="field-list">
+                        {schemaEngine.getVisibleFields(formState).map((field) => (
                             <DynamicField
                                 key={field.id}
                                 field={field}
-                                value={formState.fields[field.id]}
-                                formState={formState}
+                                value={formState[field.id]}
                                 onChange={(value) => handleFieldChange(field.id, value)}
+                                formState={formState}
+                                schemaEngine={schemaEngine}
                             />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Usage Configuration */}
-            {schema.usage && schema.usage.length > 0 && (
-                <div className="card">
-                    <div className="card-header">
-                        <h3 className="card-title">Usage Assumptions</h3>
-                        <div className="flex gap-sm">
-                            <button className="btn btn-sm" onClick={() => applyUsageProfile('low')}>
-                                Low
+            {/* Usage Assumptions */}
+            {dimensions.length > 0 && (
+                <div className="usage-section">
+                    <div className="usage-header">
+                        <h3>Usage Assumptions</h3>
+                        <div className="usage-presets">
+                            <button
+                                className="btn-preset btn-preset-low"
+                                onClick={() => handleUsagePreset('low')}
+                                title="Low usage profile"
+                            >
+                                <span className="preset-icon">📊</span>
+                                <span className="preset-label">Low</span>
                             </button>
-                            <button className="btn btn-sm" onClick={() => applyUsageProfile('medium')}>
-                                Medium
+                            <button
+                                className="btn-preset btn-preset-medium"
+                                onClick={() => handleUsagePreset('medium')}
+                                title="Medium usage profile"
+                            >
+                                <span className="preset-icon">📈</span>
+                                <span className="preset-label">Medium</span>
                             </button>
-                            <button className="btn btn-sm" onClick={() => applyUsageProfile('high')}>
-                                High
+                            <button
+                                className="btn-preset btn-preset-high"
+                                onClick={() => handleUsagePreset('high')}
+                                title="High usage profile"
+                            >
+                                <span className="preset-icon">🚀</span>
+                                <span className="preset-label">High</span>
                             </button>
                         </div>
                     </div>
 
-                    <div>
-                        {schema.usage
-                            .filter(dimension => dimension.type !== 'calculated')
-                            .map(dimension => (
+                    <div className="usage-dimensions">
+                        {dimensions
+                            .filter((dim) => dim.type !== 'calculated')
+                            .map((dimension) => (
                                 <UsageSlider
                                     key={dimension.id}
                                     dimension={dimension}
-                                    value={formState.usage[dimension.id] || dimension.default}
+                                    value={usageState[dimension.id]}
                                     onChange={(value) => handleUsageChange(dimension.id, value)}
                                 />
                             ))}
                     </div>
+
+                    {/* Show calculated dimensions */}
+                    {dimensions.some((dim) => dim.type === 'calculated') && (
+                        <div className="calculated-dimensions">
+                            <h4>Calculated Values</h4>
+                            {dimensions
+                                .filter((dim) => dim.type === 'calculated')
+                                .map((dimension) => (
+                                    <div key={dimension.id} className="calculated-item">
+                                        <span className="label">{dimension.label}:</span>
+                                        <span className="value">
+                                            {usageState[dimension.id].toFixed(2)} {dimension.unit}
+                                        </span>
+                                    </div>
+                                ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
     );
-}
+};
 
 export default ServiceConfigurator;

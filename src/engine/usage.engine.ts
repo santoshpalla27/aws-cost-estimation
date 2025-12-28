@@ -1,97 +1,114 @@
-import { UsageDimension } from '@types/schema.types';
+import { UsageDimension } from '@/schema/schema.contract';
 
 /**
- * Usage preset profiles
- */
-export type UsageProfile = 'low' | 'medium' | 'high' | 'custom';
-
-/**
- * Usage state for a service
+ * Usage state - current values for all usage dimensions
  */
 export interface UsageState {
     [dimensionId: string]: number;
 }
 
 /**
- * Usage Modeling Engine
+ * Usage preset profile
+ */
+export type UsagePreset = 'low' | 'medium' | 'high';
+
+/**
+ * Usage tier for tiered pricing calculations
+ */
+export interface UsageTier {
+    min: number;
+    max?: number; // undefined means infinity
+    rate: number;
+}
+
+/**
+ * Tiered usage breakdown
+ */
+export interface TieredUsageBreakdown {
+    total: number;
+    tiers: Array<{
+        min: number;
+        max: number | undefined;
+        usage: number;
+        rate: number;
+        cost: number;
+    }>;
+}
+
+/**
+ * Usage Engine
  * 
- * Manages usage dimensions, presets, and calculated values
+ * Manages usage dimensions and their values.
+ * Completely generic - no service-specific logic.
  */
 export class UsageEngine {
     private dimensions: Map<string, UsageDimension> = new Map();
-    private usageState: UsageState = {};
+    private state: UsageState = {};
 
     /**
      * Initialize with usage dimensions from schema
      */
     initialize(dimensions: UsageDimension[]): void {
         this.dimensions.clear();
-        this.usageState = {};
+        this.state = {};
 
         for (const dimension of dimensions) {
             this.dimensions.set(dimension.id, dimension);
-            this.usageState[dimension.id] = dimension.default;
+            this.state[dimension.id] = dimension.default;
         }
+
+        // Calculate any calculated dimensions
+        this.recalculateAll();
     }
 
     /**
      * Get current usage state
      */
-    getUsageState(): UsageState {
-        return { ...this.usageState };
+    getState(): UsageState {
+        return { ...this.state };
     }
 
     /**
-     * Set usage value for a dimension
+     * Set value for a dimension
      */
-    setUsage(dimensionId: string, value: number): void {
+    setValue(dimensionId: string, value: number): void {
         const dimension = this.dimensions.get(dimensionId);
 
         if (!dimension) {
-            throw new Error(`Unknown usage dimension: ${dimensionId}`);
+            console.warn(`Unknown usage dimension: ${dimensionId}`);
+            return;
         }
 
         // Validate range
         if (dimension.min !== undefined && value < dimension.min) {
-            throw new Error(`Value ${value} is below minimum ${dimension.min} for ${dimensionId}`);
+            value = dimension.min;
         }
-
         if (dimension.max !== undefined && value > dimension.max) {
-            throw new Error(`Value ${value} exceeds maximum ${dimension.max} for ${dimensionId}`);
+            value = dimension.max;
         }
 
-        this.usageState[dimensionId] = value;
+        this.state[dimensionId] = value;
 
         // Recalculate dependent dimensions
-        this.recalculateDependent();
+        this.recalculateDependent(dimensionId);
     }
 
     /**
-     * Apply a usage profile preset
+     * Apply preset profile to all dimensions
      */
-    applyProfile(profile: UsageProfile): void {
-        if (profile === 'custom') {
-            return; // Keep current values
-        }
-
+    applyPreset(preset: UsagePreset): void {
         for (const [id, dimension] of this.dimensions) {
             if (dimension.type === 'calculated') {
                 continue; // Skip calculated dimensions
             }
 
-            if (dimension.presets && dimension.presets[profile] !== undefined) {
-                this.usageState[id] = dimension.presets[profile];
+            if (dimension.presets && dimension.presets[preset] !== undefined) {
+                this.state[id] = dimension.presets[preset];
             }
         }
 
-        this.recalculateDependent();
-    }
-
-    /**
-     * Get usage value for a dimension
-     */
-    getUsage(dimensionId: string): number {
-        return this.usageState[dimensionId] ?? 0;
+        // Recalculate all calculated dimensions
+        this.recalculateAll();
     }
 
     /**
@@ -104,52 +121,87 @@ export class UsageEngine {
     /**
      * Get all dimensions
      */
-    getAllDimensions(): UsageDimension[] {
+    getDimensions(): UsageDimension[] {
         return Array.from(this.dimensions.values());
     }
 
     /**
      * Recalculate all calculated dimensions
      */
-    private recalculateDependent(): void {
-        for (const [id, dimension] of this.dimensions) {
-            if (dimension.type === 'calculated' && dimension.formula) {
-                try {
-                    const value = this.evaluateFormula(dimension.formula);
-                    this.usageState[id] = value;
-                } catch (error) {
-                    console.error(`Error calculating ${id}:`, error);
-                    this.usageState[id] = 0;
-                }
-            }
+    private recalculateAll(): void {
+        const calculated = Array.from(this.dimensions.values())
+            .filter(d => d.type === 'calculated');
+
+        // Sort by dependencies to ensure correct order
+        const sorted = this.topologicalSort(calculated);
+
+        for (const dimension of sorted) {
+            this.recalculateDimension(dimension.id);
         }
     }
 
     /**
-     * Evaluate a usage formula
-     * Formula can reference other usage dimensions
-     * Example: "hours * instances" or "gb_in + gb_out"
+     * Recalculate dimensions that depend on the changed dimension
      */
-    private evaluateFormula(formula: string): number {
-        // Create a safe evaluation context
-        const context: Record<string, number> = {};
+    private recalculateDependent(changedId: string): void {
+        const dependent = Array.from(this.dimensions.values())
+            .filter(d => d.type === 'calculated' && d.dependsOn?.includes(changedId));
 
-        for (const [id, value] of Object.entries(this.usageState)) {
-            context[id] = value;
+        for (const dimension of dependent) {
+            this.recalculateDimension(dimension.id);
+            // Recursively recalculate anything that depends on this
+            this.recalculateDependent(dimension.id);
+        }
+    }
+
+    /**
+     * Recalculate a single calculated dimension
+     */
+    private recalculateDimension(dimensionId: string): void {
+        const dimension = this.dimensions.get(dimensionId);
+
+        if (!dimension || dimension.type !== 'calculated' || !dimension.formula) {
+            return;
         }
 
-        // Add common constants
-        context.HOURS_PER_MONTH = 730; // Average hours per month
-        context.DAYS_PER_MONTH = 30.42; // Average days per month
-        context.GB_TO_TB = 1024;
-
         try {
-            // Simple formula evaluation using Function constructor
-            // This is safe because formulas come from trusted schemas, not user input
-            const func = new Function(...Object.keys(context), `return ${formula};`);
-            const result = func(...Object.values(context));
+            const result = this.evaluateFormula(dimension.formula);
+            this.state[dimensionId] = result;
+        } catch (error) {
+            console.error(`Error calculating dimension ${dimensionId}:`, error);
+            this.state[dimensionId] = 0;
+        }
+    }
 
-            return typeof result === 'number' && !isNaN(result) ? result : 0;
+    /**
+     * Evaluate a formula expression
+     */
+    private evaluateFormula(formula: string): number {
+        try {
+            // Create evaluation context with current state
+            const context = { ...this.state };
+
+            // Add math functions
+            const helpers = {
+                max: Math.max,
+                min: Math.min,
+                ceil: Math.ceil,
+                floor: Math.floor,
+                round: Math.round,
+                abs: Math.abs,
+                sqrt: Math.sqrt,
+            };
+
+            // Create function with controlled context
+            const func = new Function(
+                ...Object.keys(context),
+                ...Object.keys(helpers),
+                `return ${formula};`
+            );
+
+            const result = func(...Object.values(context), ...Object.values(helpers));
+
+            return typeof result === 'number' ? result : 0;
         } catch (error) {
             console.error(`Formula evaluation error: ${formula}`, error);
             return 0;
@@ -157,20 +209,69 @@ export class UsageEngine {
     }
 
     /**
-     * Validate current usage state
+     * Topological sort for calculated dimensions
+     */
+    private topologicalSort(dimensions: UsageDimension[]): UsageDimension[] {
+        const sorted: UsageDimension[] = [];
+        const visited = new Set<string>();
+        const visiting = new Set<string>();
+
+        const visit = (dimension: UsageDimension): void => {
+            if (visited.has(dimension.id)) return;
+            if (visiting.has(dimension.id)) {
+                console.warn(`Circular dependency detected in usage dimension: ${dimension.id}`);
+                return;
+            }
+
+            visiting.add(dimension.id);
+
+            // Visit dependencies first
+            if (dimension.dependsOn) {
+                for (const depId of dimension.dependsOn) {
+                    const dep = this.dimensions.get(depId);
+                    if (dep && dep.type === 'calculated') {
+                        visit(dep);
+                    }
+                }
+            }
+
+            visiting.delete(dimension.id);
+            visited.add(dimension.id);
+            sorted.push(dimension);
+        };
+
+        for (const dimension of dimensions) {
+            visit(dimension);
+        }
+
+        return sorted;
+    }
+
+    /**
+     * Validate usage state
      */
     validate(): { valid: boolean; errors: string[] } {
         const errors: string[] = [];
 
         for (const [id, dimension] of this.dimensions) {
-            const value = this.usageState[id];
+            const value = this.state[id];
+
+            if (value === undefined || value === null) {
+                errors.push(`Missing value for dimension: ${dimension.label}`);
+                continue;
+            }
+
+            if (typeof value !== 'number' || isNaN(value)) {
+                errors.push(`Invalid value for dimension ${dimension.label}: must be a number`);
+                continue;
+            }
 
             if (dimension.min !== undefined && value < dimension.min) {
-                errors.push(`${dimension.label} must be at least ${dimension.min} ${dimension.unit}`);
+                errors.push(`${dimension.label} is below minimum (${dimension.min})`);
             }
 
             if (dimension.max !== undefined && value > dimension.max) {
-                errors.push(`${dimension.label} cannot exceed ${dimension.max} ${dimension.unit}`);
+                errors.push(`${dimension.label} exceeds maximum (${dimension.max})`);
             }
         }
 
@@ -181,53 +282,59 @@ export class UsageEngine {
     }
 
     /**
-     * Get usage summary for display
-     */
-    getSummary(): Array<{
-        id: string;
-        label: string;
-        value: number;
-        unit: string;
-        type: string;
-    }> {
-        return Array.from(this.dimensions.values()).map(dimension => ({
-            id: dimension.id,
-            label: dimension.label,
-            value: this.usageState[dimension.id] ?? 0,
-            unit: dimension.unit,
-            type: dimension.type,
-        }));
-    }
-
-    /**
-     * Reset to defaults
+     * Reset to default values
      */
     reset(): void {
         for (const [id, dimension] of this.dimensions) {
-            this.usageState[id] = dimension.default;
+            this.state[id] = dimension.default;
         }
-        this.recalculateDependent();
+        this.recalculateAll();
     }
 
     /**
-     * Export usage state
+     * Export state as assumptions for cost breakdown
      */
-    export(): UsageState {
-        return { ...this.usageState };
+    exportAssumptions(): string[] {
+        const assumptions: string[] = [];
+
+        for (const [id, dimension] of this.dimensions) {
+            const value = this.state[id];
+            assumptions.push(`${dimension.label}: ${value} ${dimension.unit}`);
+        }
+
+        return assumptions;
     }
 
     /**
-     * Import usage state
+     * Calculate tiered usage
+     * Used for AWS-style tiered pricing (e.g., data transfer)
      */
-    import(state: UsageState): void {
-        for (const [id, value] of Object.entries(state)) {
-            if (this.dimensions.has(id)) {
-                this.usageState[id] = value;
-            }
+    calculateTiered(totalUsage: number, tiers: UsageTier[]): TieredUsageBreakdown {
+        const breakdown: TieredUsageBreakdown = {
+            total: totalUsage,
+            tiers: [],
+        };
+
+        let remaining = totalUsage;
+
+        for (const tier of tiers) {
+            if (remaining <= 0) break;
+
+            const tierMax = tier.max ?? Infinity;
+            const tierCapacity = tierMax - tier.min;
+            const tierUsage = Math.min(remaining, tierCapacity);
+
+            breakdown.tiers.push({
+                min: tier.min,
+                max: tier.max,
+                usage: tierUsage,
+                rate: tier.rate,
+                cost: tierUsage * tier.rate,
+            });
+
+            remaining -= tierUsage;
         }
-        this.recalculateDependent();
+
+        return breakdown;
     }
 }
-
-// Create singleton instance
-export const usageEngine = new UsageEngine();

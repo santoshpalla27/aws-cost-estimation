@@ -1,0 +1,670 @@
+{
+  "metadata": {
+    "service": "vpc",
+    "region": "us-east-1",
+    "version": "1.0.0",
+    "generatedAt": "2025-12-28T08:18:28.800Z",
+    "source": "aws-pricing-api",
+    "recordCount": 47
+  },
+  "records": [
+    {
+      "sku": "2Z8EJNMUG8MRUAQM",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "Resource"
+      },
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-Resource-Hours",
+        "operation": "VpcResourceConsumer"
+      }
+    },
+    {
+      "sku": "3MQ9DPVXQ37SYP6U",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.006
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcResource-Consumer-Bytes",
+        "operation": "VpcResourceConsumer"
+      }
+    },
+    {
+      "sku": "3MUZ8GNDVB5XPGSB",
+      "dimensions": {},
+      "price": {
+        "unit": "NetworkInterface-Assessment",
+        "usd": 0.002
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-NetworkInterface-Assessment",
+        "operation": "AnalyzeENI"
+      }
+    },
+    {
+      "sku": "4GQUNXTFWVSGPUZK",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.005
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-PublicIPv4:InUseAddress",
+        "operation": ""
+      }
+    },
+    {
+      "sku": "6FV8M2VENJXE5B4X",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayDirectConnect"
+      }
+    },
+    {
+      "sku": "6QWMNMNS4H37T5JU",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.025
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPCLattice-DataProcessing-Bytes",
+        "operation": "VpcLattice"
+      }
+    },
+    {
+      "sku": "723D42P2A7BBTQKG",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 1.95
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPN-concentrator-Usage-Hours:ipsec.1",
+        "operation": "CreateVpnConcentrator"
+      }
+    },
+    {
+      "sku": "7A7HYVQ5AWVHXR48",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPN-concentrator-site-Usage-Hours:ipsec.1",
+        "operation": "CreateVpnConnection"
+      }
+    },
+    {
+      "sku": "7DA87KWXES4HFUJX",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VerifiedAccess-DataProcess-Bytes",
+        "operation": "VerifiedAccess-data"
+      }
+    },
+    {
+      "sku": "7MHS8JCF79BWXVUJ",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.6
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPN-large-Usage-Hours:ipsec.1",
+        "operation": "CreateVpnConnection"
+      }
+    },
+    {
+      "sku": "7W9NVPG8YS74A6WC",
+      "dimensions": {},
+      "price": {
+        "unit": "GigaBytes",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Bytes",
+        "operation": "TransitGatewayVPC"
+      }
+    },
+    {
+      "sku": "9N2FHGMMCZBKDCGH",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayVPC"
+      }
+    },
+    {
+      "sku": "AK5AFB32HAKBFRSV",
+      "dimensions": {},
+      "price": {
+        "unit": "Connections",
+        "usd": 1e-7
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPCLattice-ConnectionCount-Charged",
+        "operation": "VpcLattice"
+      }
+    },
+    {
+      "sku": "BJ5T77AX98TZRG6J",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayConnect"
+      }
+    },
+    {
+      "sku": "CGTM7UBZH2TVW4HH",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "Gateway Load Balancer Endpoint"
+      },
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-GWLBE-Hours",
+        "operation": "VpcEndpoint"
+      }
+    },
+    {
+      "sku": "CJWGHHWNZBJQ72FC",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.1
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcLattice-Service-Network-Resource-Hours",
+        "operation": "VpcResourceConsumer"
+      }
+    },
+    {
+      "sku": "CUP7BB8T9H2HZPVT",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayVPN"
+      }
+    },
+    {
+      "sku": "CVUQ9UWHB8GHKE97",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.004
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcResource-ODB-Consumer-Bytes",
+        "operation": "VpcResourceConsumer"
+      }
+    },
+    {
+      "sku": "DJR6RVPWHDN423JY",
+      "dimensions": {},
+      "price": {
+        "unit": "Hourly",
+        "usd": 0.001
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VerifiedAccess-ConnectionHours",
+        "operation": "VerifiedAccessConnection"
+      }
+    },
+    {
+      "sku": "DJUV5YF82V6MHHV2",
+      "dimensions": {},
+      "price": {
+        "unit": "Requests",
+        "usd": 1e-7
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPCLattice-RequestCount-Charged",
+        "operation": "VpcLattice"
+      }
+    },
+    {
+      "sku": "DQYYEZBCWSW5XS2R",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "PrivateLink"
+      },
+      "price": {
+        "unit": "GB",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-Bytes",
+        "operation": "VpcEndpoint"
+      }
+    },
+    {
+      "sku": "EC5BHP9ZANKN9EQD",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "VPN-Usage-Hours:ipsec.1",
+        "operation": "CreateVpnConnection"
+      }
+    },
+    {
+      "sku": "EN2N5TATXE673A3B",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "PrivateLink"
+      },
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-Hours",
+        "operation": "VpcEndpoint"
+      }
+    },
+    {
+      "sku": "ENEKDTUQYTKS8TP4",
+      "dimensions": {},
+      "price": {
+        "unit": "GigaBytes",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Bytes",
+        "operation": "TransitGatewayConcentratorVPN"
+      }
+    },
+    {
+      "sku": "F6U9HDNT75GWAMM2",
+      "dimensions": {},
+      "price": {
+        "unit": "ReachabilityAnalyses",
+        "usd": 0.1
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-Analysis-Runs",
+        "operation": "RunAnalysis"
+      }
+    },
+    {
+      "sku": "FBSC9FB2KXJ38ZUZ",
+      "dimensions": {},
+      "price": {
+        "unit": "Hourly",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-ClientVPN-ConnectionHours",
+        "operation": "ClientVPNConnections"
+      }
+    },
+    {
+      "sku": "G45CEDSGU2ER8WPQ",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.008
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-PublicIPv4:ContiguousBlock",
+        "operation": "ProvisionIpamPoolCidr"
+      }
+    },
+    {
+      "sku": "JJTHUHDDR6A6AMZ2",
+      "dimensions": {},
+      "price": {
+        "unit": "Hourly",
+        "usd": 0.1
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-ClientVPN-EndpointHours",
+        "operation": "ClientVPNEndpoints"
+      }
+    },
+    {
+      "sku": "KPTJWQRPRKHTH73R",
+      "dimensions": {},
+      "price": {
+        "unit": "hours",
+        "usd": 0.2
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VerifiedAccess-App-Hours",
+        "operation": "VerifiedAccess-Apps"
+      }
+    },
+    {
+      "sku": "MH5MV7B93CBZYHYH",
+      "dimensions": {},
+      "price": {
+        "unit": "hours",
+        "usd": 0.00027
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-IPAddressManager-IP-Hours",
+        "operation": "IPAM-Active-IP"
+      }
+    },
+    {
+      "sku": "NJF9DVF9AEMQYT6B",
+      "dimensions": {},
+      "price": {
+        "unit": "Hour",
+        "usd": 0.75
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-RouteServer-EndpointHours",
+        "operation": "RouteServerEndpoint"
+      }
+    },
+    {
+      "sku": "NWMDJWA6SF7Z3MXD",
+      "dimensions": {},
+      "price": {
+        "unit": "GigaBytes",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Bytes",
+        "operation": "TransitGatewayVPN"
+      }
+    },
+    {
+      "sku": "NYTF84WY2A8AHZZC",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.006
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcResource-Provider-Bytes",
+        "operation": "VpcResourceProvider"
+      }
+    },
+    {
+      "sku": "P9VNKAB2S5XNKWVQ",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayConcentratorVPN"
+      }
+    },
+    {
+      "sku": "PCSVVPSWDGZJCUX9",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.006
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcResource-ODB-Provider-Bytes",
+        "operation": "VpcResourceProvider"
+      }
+    },
+    {
+      "sku": "PGNDUBPKV98PF5TB",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Hours",
+        "operation": "TransitGatewayPeering"
+      }
+    },
+    {
+      "sku": "QCP92DSX72Q3CE8J",
+      "dimensions": {},
+      "price": {
+        "unit": "GigaBytes",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TGW-Multicast-Consumer-Bytes",
+        "operation": "TransitGatewayVPC"
+      }
+    },
+    {
+      "sku": "T6YDQKTMVWKNJFJ8",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.005
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-PublicIPv4:IdleAddress",
+        "operation": ""
+      }
+    },
+    {
+      "sku": "TT8R6YKCHQRWRPQH",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-OdbPeering-In-Bytes",
+        "operation": ""
+      }
+    },
+    {
+      "sku": "UMGWBSQ7AD933J4M",
+      "dimensions": {},
+      "price": {
+        "unit": "GB",
+        "usd": 0.01
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-OdbPeering-Out-Bytes",
+        "operation": ""
+      }
+    },
+    {
+      "sku": "WJVJ7M2CHEBD98JZ",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "Gateway Load Balancer Endpoint"
+      },
+      "price": {
+        "unit": "GB",
+        "usd": 0.0035
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-GWLBE-Bytes",
+        "operation": "VpcEndpoint"
+      }
+    },
+    {
+      "sku": "Y4W94TAU7UQ2G5QV",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "Resource"
+      },
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.1
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-ODB-Resource-Hours",
+        "operation": "VpcResourceConsumer"
+      }
+    },
+    {
+      "sku": "YGVQQQ3WT9VAX47N",
+      "dimensions": {},
+      "price": {
+        "unit": "GigaBytes",
+        "usd": 0.02
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-TransitGateway-Bytes",
+        "operation": "TransitGatewayDirectConnect"
+      }
+    },
+    {
+      "sku": "YJ3BCMKN6N4V4VX3",
+      "dimensions": {},
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.025
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VPCLattice-Service-Hourly",
+        "operation": "VpcLattice"
+      }
+    },
+    {
+      "sku": "Z2ZYE9BNTKZB3ZQ8",
+      "dimensions": {},
+      "price": {
+        "unit": "hour",
+        "usd": 0.015
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-ENI-Mirror",
+        "operation": "ENI-to-ENI"
+      }
+    },
+    {
+      "sku": "ZG7JTGZ4S7E5N26T",
+      "dimensions": {
+        "serviceType": "vpc-endpoint",
+        "endpointType": "Endpoint Service"
+      },
+      "price": {
+        "unit": "Hrs",
+        "usd": 0.05
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VpcEndpoint-Service-Hours",
+        "operation": "VpcEndpoint"
+      }
+    },
+    {
+      "sku": "ZRFZCHNHEEPEHEJY",
+      "dimensions": {},
+      "price": {
+        "unit": "hours",
+        "usd": 0.2
+      },
+      "metadata": {
+        "description": "",
+        "usageType": "USE1-VerifiedAccess-non-HTTP-App-Hours",
+        "operation": "VerifiedAccess-NonHTTP-Apps"
+      }
+    }
+  ],
+  "index": {
+    "serviceType:vpc-endpoint": [
+      "2Z8EJNMUG8MRUAQM",
+      "CGTM7UBZH2TVW4HH",
+      "DQYYEZBCWSW5XS2R",
+      "EN2N5TATXE673A3B",
+      "WJVJ7M2CHEBD98JZ",
+      "Y4W94TAU7UQ2G5QV",
+      "ZG7JTGZ4S7E5N26T"
+    ],
+    "endpointType:Resource": [
+      "2Z8EJNMUG8MRUAQM",
+      "Y4W94TAU7UQ2G5QV"
+    ],
+    "endpointType:Gateway Load Balancer Endpoint": [
+      "CGTM7UBZH2TVW4HH",
+      "WJVJ7M2CHEBD98JZ"
+    ],
+    "endpointType:PrivateLink": [
+      "DQYYEZBCWSW5XS2R",
+      "EN2N5TATXE673A3B"
+    ],
+    "endpointType:Endpoint Service": [
+      "ZG7JTGZ4S7E5N26T"
+    ]
+  }
+}

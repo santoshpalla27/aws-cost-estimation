@@ -1,35 +1,43 @@
-import { FieldDefinition, ServiceFormState } from '@types/schema.types';
-import { dependencyEngine } from '@engine/dependency.engine';
+import React from 'react';
+import { FieldDefinition } from '@/schema/schema.contract';
+import { SchemaEngine, FormState } from '@/schema/schema.engine';
+import './DynamicField.css';
 
 interface DynamicFieldProps {
     field: FieldDefinition;
     value: unknown;
-    formState: ServiceFormState;
     onChange: (value: unknown) => void;
+    formState: FormState;
+    schemaEngine: SchemaEngine;
 }
 
-function DynamicField({ field, value, formState, onChange }: DynamicFieldProps) {
-    // Check visibility
-    const isVisible = dependencyEngine.isFieldVisible(field.visibleWhen, formState);
-
-    if (!isVisible) {
-        return null;
-    }
+const DynamicField: React.FC<DynamicFieldProps> = ({
+    field,
+    value,
+    onChange,
+    formState,
+    schemaEngine,
+}) => {
+    // Check if field is enabled
+    const isEnabled = schemaEngine.isFieldEnabled(field.id, formState);
 
     // Check dependencies
-    const dependenciesMet = dependencyEngine.areDependenciesMet(field.dependsOn, formState);
+    const dependenciesSatisfied = schemaEngine.areDependenciesSatisfied(field.id, formState);
 
-    const renderField = () => {
+    // Get warnings
+    const warnings = schemaEngine.getFieldWarnings(field.id, formState);
+
+    const renderInput = () => {
         switch (field.type) {
             case 'string':
                 return (
                     <input
                         type="text"
                         className="form-input"
-                        value={String(value || '')}
+                        value={(value as string) || ''}
                         onChange={(e) => onChange(e.target.value)}
-                        disabled={!dependenciesMet}
-                        placeholder={field.description}
+                        disabled={!isEnabled}
+                        placeholder={field.helpText}
                     />
                 );
 
@@ -38,26 +46,26 @@ function DynamicField({ field, value, formState, onChange }: DynamicFieldProps) 
                     <input
                         type="number"
                         className="form-input"
-                        value={Number(value || 0)}
+                        value={(value as number) || ''}
                         onChange={(e) => onChange(Number(e.target.value))}
-                        disabled={!dependenciesMet}
+                        disabled={!isEnabled}
                         min={field.validation?.min}
                         max={field.validation?.max}
-                        placeholder={field.description}
+                        placeholder={field.helpText}
                     />
                 );
 
             case 'boolean':
                 return (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer' }}>
+                    <label className="checkbox-label">
                         <input
                             type="checkbox"
                             className="form-checkbox"
-                            checked={Boolean(value)}
+                            checked={(value as boolean) || false}
                             onChange={(e) => onChange(e.target.checked)}
-                            disabled={!dependenciesMet}
+                            disabled={!isEnabled}
                         />
-                        <span>{field.description}</span>
+                        <span>{field.label}</span>
                     </label>
                 );
 
@@ -65,12 +73,17 @@ function DynamicField({ field, value, formState, onChange }: DynamicFieldProps) 
                 return (
                     <select
                         className="form-select"
-                        value={String(value || '')}
+                        value={(value as string) || ''}
                         onChange={(e) => onChange(e.target.value)}
-                        disabled={!dependenciesMet}
+                        disabled={!isEnabled}
                     >
-                        {field.options?.map(option => (
-                            <option key={String(option.value)} value={String(option.value)}>
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map((option) => (
+                            <option
+                                key={option.value}
+                                value={option.value}
+                                disabled={option.disabled}
+                            >
                                 {option.label}
                             </option>
                         ))}
@@ -79,88 +92,75 @@ function DynamicField({ field, value, formState, onChange }: DynamicFieldProps) 
 
             case 'multiselect':
                 return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)' }}>
-                        {field.options?.map(option => {
-                            const selectedValues = Array.isArray(value) ? value : [];
-                            const isSelected = selectedValues.includes(option.value);
-
-                            return (
-                                <label
-                                    key={String(option.value)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', cursor: 'pointer' }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        className="form-checkbox"
-                                        checked={isSelected}
-                                        onChange={(e) => {
-                                            const newValues = e.target.checked
-                                                ? [...selectedValues, option.value]
-                                                : selectedValues.filter(v => v !== option.value);
-                                            onChange(newValues);
-                                        }}
-                                        disabled={!dependenciesMet}
-                                    />
-                                    <div>
-                                        <div>{option.label}</div>
-                                        {option.description && (
-                                            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                                                {option.description}
-                                            </div>
-                                        )}
-                                    </div>
-                                </label>
-                            );
-                        })}
+                    <div className="multiselect">
+                        {field.options?.map((option) => (
+                            <label key={option.value} className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    className="form-checkbox"
+                                    checked={Array.isArray(value) && value.includes(option.value)}
+                                    onChange={(e) => {
+                                        const currentValue = (value as unknown[]) || [];
+                                        if (e.target.checked) {
+                                            onChange([...currentValue, option.value]);
+                                        } else {
+                                            onChange(currentValue.filter((v) => v !== option.value));
+                                        }
+                                    }}
+                                    disabled={!isEnabled || option.disabled}
+                                />
+                                <span>{option.label}</span>
+                            </label>
+                        ))}
                     </div>
                 );
 
             default:
-                return (
-                    <div className="alert alert-warning">
-                        Unsupported field type: {field.type}
-                    </div>
-                );
+                return <div className="unsupported-field">Unsupported field type: {field.type}</div>;
         }
     };
 
+    // Don't render boolean fields with labels (they render their own)
+    const showLabel = field.type !== 'boolean';
+
     return (
-        <div className="form-group">
-            {field.type !== 'boolean' && (
-                <label className={`form-label ${field.required ? 'form-label-required' : ''}`}>
+        <div className={`field-wrapper ${!isEnabled ? 'disabled' : ''}`}>
+            {showLabel && (
+                <label className="field-label">
                     {field.label}
+                    {field.required && <span className="required">*</span>}
                 </label>
             )}
 
-            {renderField()}
-
-            {field.helpText && (
-                <span className="form-help">{field.helpText}</span>
+            {field.description && (
+                <p className="field-description">{field.description}</p>
             )}
 
-            {!dependenciesMet && (
-                <div className="alert alert-warning" style={{ marginTop: 'var(--spacing-sm)', padding: 'var(--spacing-sm)' }}>
-                    This field depends on other configuration options
-                </div>
+            {renderInput()}
+
+            {field.helpText && field.type !== 'string' && field.type !== 'number' && (
+                <p className="field-help">{field.helpText}</p>
             )}
 
-            {field.warnings?.map((warning, index) => {
-                const shouldShow = dependencyEngine.evaluate(warning.condition, formState);
+            {!dependenciesSatisfied && (
+                <p className="field-warning">
+                    ⚠️ This field has unsatisfied dependencies
+                </p>
+            )}
 
-                if (!shouldShow) return null;
-
-                const alertClass = warning.severity === 'error' ? 'alert-error' :
-                    warning.severity === 'warning' ? 'alert-warning' :
-                        'alert-info';
-
-                return (
-                    <div key={index} className={`alert ${alertClass}`} style={{ marginTop: 'var(--spacing-sm)', padding: 'var(--spacing-sm)' }}>
-                        {warning.message}
-                    </div>
-                );
-            })}
+            {warnings.map((warning, index) => (
+                <p
+                    key={index}
+                    className={`field-warning severity-${warning.severity}`}
+                >
+                    {warning.severity === 'error' && '❌ '}
+                    {warning.severity === 'warning' && '⚠️ '}
+                    {warning.severity === 'info' && 'ℹ️ '}
+                    {warning.message}
+                </p>
+            ))}
         </div>
     );
-}
+};
 
 export default DynamicField;

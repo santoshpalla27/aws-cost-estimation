@@ -1,0 +1,25 @@
+{
+    "name": "aws-pricing-pipeline",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "Offline AWS Pricing Data Pipeline - Fetches and normalizes AWS pricing data",
+    "private": true,
+    "scripts": {
+        "fetch": "tsx src/index.ts fetch",
+        "normalize": "tsx src/index.ts normalize",
+        "generate": "tsx src/index.ts generate",
+        "all": "tsx src/index.ts all",
+        "validate": "tsx src/index.ts validate"
+    },
+    "dependencies": {
+        "@aws-sdk/client-pricing": "^3.490.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.6",
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

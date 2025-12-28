@@ -1,4 +1,6 @@
-import { UsageDimension } from '@types/schema.types';
+import React from 'react';
+import { UsageDimension } from '@/schema/schema.contract';
+import './UsageSlider.css';
 
 interface UsageSliderProps {
     dimension: UsageDimension;
@@ -6,79 +8,86 @@ interface UsageSliderProps {
     onChange: (value: number) => void;
 }
 
-function UsageSlider({ dimension, value, onChange }: UsageSliderProps) {
-    const handlePreset = (presetValue: number) => {
-        onChange(presetValue);
+const UsageSlider: React.FC<UsageSliderProps> = ({ dimension, value, onChange }) => {
+    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange(Number(e.target.value));
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = Number(e.target.value);
+        if (!isNaN(newValue)) {
+            onChange(newValue);
+        }
+    };
+
+    const min = dimension.min ?? 0;
+    const max = dimension.max ?? 10000;
+    const step = dimension.step ?? 1;
+
     return (
-        <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-sm)' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>
-                    {dimension.label}
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+        <div className="usage-slider">
+            <div className="slider-header">
+                <label className="slider-label">{dimension.label}</label>
+                <div className="slider-value">
                     <input
                         type="number"
-                        className="form-input"
-                        style={{ width: '120px', padding: 'var(--spacing-xs) var(--spacing-sm)' }}
+                        className="value-input"
                         value={value}
-                        onChange={(e) => onChange(Number(e.target.value))}
-                        min={dimension.min}
-                        max={dimension.max}
-                        step={dimension.step || 1}
+                        onChange={handleInputChange}
+                        min={min}
+                        max={max}
+                        step={step}
                     />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-tertiary)', minWidth: '80px' }}>
-                        {dimension.unit}
-                    </span>
+                    <span className="value-unit">{dimension.unit}</span>
                 </div>
             </div>
 
-            {dimension.type === 'slider' && (
-                <div className="slider-container">
-                    <input
-                        type="range"
-                        className="slider"
-                        value={value}
-                        onChange={(e) => onChange(Number(e.target.value))}
-                        min={dimension.min || 0}
-                        max={dimension.max || 100}
-                        step={dimension.step || 1}
-                    />
-
-                    {dimension.presets && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--spacing-sm)' }}>
-                            <button
-                                className="btn btn-sm"
-                                onClick={() => handlePreset(dimension.presets!.low)}
-                                style={{ opacity: value === dimension.presets.low ? 1 : 0.6 }}
-                            >
-                                Low ({dimension.presets.low})
-                            </button>
-                            <button
-                                className="btn btn-sm"
-                                onClick={() => handlePreset(dimension.presets!.medium)}
-                                style={{ opacity: value === dimension.presets.medium ? 1 : 0.6 }}
-                            >
-                                Medium ({dimension.presets.medium})
-                            </button>
-                            <button
-                                className="btn btn-sm"
-                                onClick={() => handlePreset(dimension.presets!.high)}
-                                style={{ opacity: value === dimension.presets.high ? 1 : 0.6 }}
-                            >
-                                High ({dimension.presets.high})
-                            </button>
-                        </div>
-                    )}
-                </div>
+            {dimension.description && (
+                <p className="slider-description">{dimension.description}</p>
             )}
 
-            {dimension.description && (
-                <span className="form-help">{dimension.description}</span>
+            <input
+                type="range"
+                className="slider-control"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={handleSliderChange}
+            />
+
+            <div className="slider-range">
+                <span className="range-min">{min}</span>
+                <span className="range-max">{max}</span>
+            </div>
+
+            {dimension.presets && (
+                <div className="slider-presets">
+                    <button
+                        className="preset-btn"
+                        onClick={() => onChange(dimension.presets!.low)}
+                        title="Low usage"
+                    >
+                        L
+                    </button>
+                    <button
+                        className="preset-btn"
+                        onClick={() => onChange(dimension.presets!.medium)}
+                        title="Medium usage"
+                    >
+                        M
+                    </button>
+                    <button
+                        className="preset-btn"
+                        onClick={() => onChange(dimension.presets!.high)}
+                        title="High usage"
+                    >
+                        H
+                    </button>
+                </div>
             )}
         </div>
     );
-}
+};
 
 export default UsageSlider;

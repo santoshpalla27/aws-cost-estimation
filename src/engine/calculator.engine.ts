@@ -1,63 +1,119 @@
-import { CostFormula, CostEstimate, CostLineItem, ServiceFormState } from '@types/schema.types';
-import { UsageState } from './usage.engine';
-import { pricingEngine, PricingRecord } from './pricing.engine';
+import { CostFormula } from '@/schema/schema.contract';
+import { FormState } from '@/schema/schema.engine';
+import { UsageState, UsageTier, TieredUsageBreakdown } from './usage.engine';
+import { formulaEvaluator, FormulaContext } from './formula.evaluator';
+import { pricingEngine } from './pricing.engine';
 
 /**
- * Formula evaluation context
+ * AWS Data Transfer Tiers (example - actual rates from pricing API)
  */
-interface FormulaContext {
-    usage: UsageState;
-    pricing: Record<string, number>;
-    fields: Record<string, unknown>;
-    constants: Record<string, number>;
+export const AWS_DATA_TRANSFER_TIERS: UsageTier[] = [
+    { min: 0, max: 10240, rate: 0.09 },        // First 10 TB
+    { min: 10240, max: 51200, rate: 0.085 },   // Next 40 TB
+    { min: 51200, max: 153600, rate: 0.07 },   // Next 100 TB
+    { min: 153600, rate: 0.05 },               // Over 150 TB
+];
+
+/**
+ * Cost line item
+ */
+export interface CostLineItem {
+    id: string;
+    label: string;
+    formula: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    unit: string;
+    description?: string;
 }
 
 /**
- * Cost Calculator Engine
+ * Cost estimate
+ */
+export interface CostEstimate {
+    service: string;
+    region: string;
+    lineItems: CostLineItem[];
+    subtotal: number;
+    total: number;
+    currency: string;
+    period: 'monthly' | 'annual';
+    timestamp: string;
+    assumptions: string[];
+}
+
+/**
+ * Calculator Engine
  * 
- * Evaluates cost formulas and generates detailed cost breakdowns
+ * Evaluates cost formulas and generates detailed breakdowns.
+ * Completely generic - no service-specific logic.
  */
 export class CalculatorEngine {
     /**
-     * Calculate costs for a service configuration
+     * Calculate costs based on schema formulas
      */
     async calculate(
         service: string,
         region: string,
-        formState: ServiceFormState,
-        usageState: UsageState,
         formulas: CostFormula[],
-        pricingRecords: Map<string, PricingRecord>
+        formState: FormState,
+        usageState: UsageState
     ): Promise<CostEstimate> {
         const lineItems: CostLineItem[] = [];
         const timestamp = new Date().toISOString();
 
-        // Build pricing context
+        // Build pricing context (simplified - actual pricing lookups would go here)
         const pricingContext: Record<string, number> = {};
-        for (const [key, record] of pricingRecords) {
-            pricingContext[key] = record.price;
-        }
 
-        // Build formula context
+        // Build formula evaluation context
         const context: FormulaContext = {
+            fields: formState,
             usage: usageState,
             pricing: pricingContext,
-            fields: formState.fields,
             constants: {
                 HOURS_PER_MONTH: 730,
+                HOURS_PER_YEAR: 8760,
                 DAYS_PER_MONTH: 30.42,
+                DAYS_PER_YEAR: 365,
+                WEEKS_PER_MONTH: 4.33,
+                WEEKS_PER_YEAR: 52,
                 GB_TO_TB: 1024,
+                MB_TO_GB: 1024,
                 SECONDS_PER_HOUR: 3600,
+                MINUTES_PER_HOUR: 60,
+            },
+            helpers: {
+                // Tiered pricing helper
+                calculateTiered: (usage: number, tiers: UsageTier[]): number => {
+                    return this.calculateTieredCost(usage, tiers);
+                },
             },
         };
 
         // Evaluate each formula
         for (const formula of formulas) {
             try {
-                const result = this.evaluateFormula(formula, context, pricingRecords);
+                // Check condition if present
+                if (formula.condition) {
+                    // Use dependency engine to evaluate condition
+                    // For now, skip formulas with conditions
+                    // TODO: Integrate with dependency engine
+                }
 
-                if (result.subtotal > 0) {
-                    lineItems.push(result);
+                const result = formulaEvaluator.evaluate(formula.formula, context);
+
+                if (result > 0) {
+                    lineItems.push({
+                        id: formula.id,
+                        label: formula.label,
+                        formula: formula.formula,
+                        quantity: result,
+                        unitPrice: 1, // Simplified - actual pricing lookup would go here
+                        subtotal: result,
+                        unit: formula.unit,
+                        description: formula.description,
+                    });
                 }
             } catch (error) {
                 console.error(`Error evaluating formula ${formula.id}:`, error);
@@ -82,86 +138,11 @@ export class CalculatorEngine {
     }
 
     /**
-     * Evaluate a single cost formula
-     */
-    private evaluateFormula(
-        formula: CostFormula,
-        context: FormulaContext,
-        pricingRecords: Map<string, PricingRecord>
-    ): CostLineItem {
-        // Parse and evaluate the formula
-        const { quantity, unitPrice, details } = this.parseFormula(formula.formula, context);
-
-        // Calculate subtotal
-        const subtotal = quantity * unitPrice;
-
-        return {
-            id: formula.id,
-            label: formula.label,
-            formula: formula.formula,
-            usage: context.usage,
-            unitPrice,
-            quantity,
-            subtotal,
-            unit: formula.unit,
-            details: details || formula.description,
-        };
-    }
-
-    /**
-     * Parse and evaluate a formula expression
-     */
-    private parseFormula(
-        formula: string,
-        context: FormulaContext
-    ): { quantity: number; unitPrice: number; details?: string } {
-        try {
-            // Create evaluation context - merge all context objects
-            const evalContext = {
-                ...context.usage,
-                ...context.pricing,
-                ...context.fields,  // Add form fields to context
-                ...context.constants,
-            };
-
-            // Add helper functions
-            const helpers = {
-                max: Math.max,
-                min: Math.min,
-                ceil: Math.ceil,
-                floor: Math.floor,
-                round: Math.round,
-            };
-
-            // Evaluate formula
-            const func = new Function(
-                ...Object.keys(evalContext),
-                ...Object.keys(helpers),
-                `return ${formula};`
-            );
-
-            const result = func(...Object.values(evalContext), ...Object.values(helpers));
-
-            // Handle different return types
-            if (typeof result === 'number') {
-                return { quantity: result, unitPrice: 1 };
-            } else if (typeof result === 'object' && 'quantity' in result && 'unitPrice' in result) {
-                return result;
-            } else {
-                throw new Error(`Invalid formula result type: ${typeof result}`);
-            }
-        } catch (error) {
-            console.error(`Formula evaluation error: ${formula}`, error);
-            return { quantity: 0, unitPrice: 0 };
-        }
-    }
-
-    /**
-     * Generate cost assumptions for transparency
+     * Generate assumptions for transparency
      */
     private generateAssumptions(
         usageState: UsageState,
-        formState: ServiceFormState
+        formState: FormState
     ): string[] {
         const assumptions: string[] = [];
 
@@ -173,7 +154,6 @@ export class CalculatorEngine {
         }
 
         // Add configuration assumptions
-        assumptions.push(`Region: ${formState.region}`);
         assumptions.push(`Calculation date: ${new Date().toLocaleDateString()}`);
         assumptions.push('Prices are subject to change');
         assumptions.push('Costs are estimates and may vary based on actual usage');
@@ -198,6 +178,13 @@ export class CalculatorEngine {
      */
     toAnnual(monthlyCost: number): number {
         return monthlyCost * 12;
+    }
+
+    /**
+     * Convert annual to monthly cost
+     */
+    toMonthly(annualCost: number): number {
+        return annualCost / 12;
     }
 
     /**
@@ -233,12 +220,12 @@ export class CalculatorEngine {
         const percentChange = estimate1.total === 0 ? 0 : (difference / estimate1.total) * 100;
 
         let cheaper: 'estimate1' | 'estimate2' | 'equal';
-        if (difference < 0) {
-            cheaper = 'estimate2';
-        } else if (difference > 0) {
-            cheaper = 'estimate1';
-        } else {
+        if (Math.abs(difference) < 0.01) {
             cheaper = 'equal';
+        } else if (difference < 0) {
+            cheaper = 'estimate2';
+        } else {
+            cheaper = 'estimate1';
         }
 
         return { difference, percentChange, cheaper };
@@ -255,9 +242,10 @@ export class CalculatorEngine {
      * Export estimate to CSV
      */
     exportToCSV(estimate: CostEstimate): string {
-        const headers = ['Component', 'Quantity', 'Unit Price', 'Subtotal', 'Unit'];
+        const headers = ['Component', 'Formula', 'Quantity', 'Unit Price', 'Subtotal', 'Unit'];
         const rows = estimate.lineItems.map(item => [
             item.label,
+            item.formula,
             item.quantity.toString(),
             item.unitPrice.toString(),
             item.subtotal.toString(),
@@ -266,12 +254,80 @@ export class CalculatorEngine {
 
         const csv = [
             headers.join(','),
-            ...rows.map(row => row.join(',')),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
             '',
-            `Total,,,${estimate.total},${estimate.currency}`,
+            `Total,,,,,${estimate.total}`,
+            `Currency,,,,,${estimate.currency}`,
+            `Period,,,,,${estimate.period}`,
         ].join('\n');
 
         return csv;
+    }
+
+    /**
+     * Generate detailed breakdown report
+     */
+    generateReport(estimate: CostEstimate): string {
+        const lines: string[] = [];
+
+        lines.push('='.repeat(80));
+        lines.push(`AWS COST ESTIMATE - ${estimate.service.toUpperCase()}`);
+        lines.push('='.repeat(80));
+        lines.push(`Region: ${estimate.region}`);
+        lines.push(`Period: ${estimate.period}`);
+        lines.push(`Generated: ${new Date(estimate.timestamp).toLocaleString()}`);
+        lines.push('='.repeat(80));
+        lines.push('');
+
+        lines.push('COST BREAKDOWN');
+        lines.push('-'.repeat(80));
+
+        for (const item of estimate.lineItems) {
+            lines.push(`${item.label}`);
+            lines.push(`  Formula: ${item.formula}`);
+            lines.push(`  Quantity: ${item.quantity} ${item.unit}`);
+            lines.push(`  Cost: ${this.formatCost(item.subtotal)}`);
+            if (item.description) {
+                lines.push(`  Note: ${item.description}`);
+            }
+            lines.push('');
+        }
+
+        lines.push('-'.repeat(80));
+        lines.push(`TOTAL: ${this.formatCost(estimate.total)} / ${estimate.period}`);
+        lines.push('='.repeat(80));
+        lines.push('');
+
+        lines.push('ASSUMPTIONS');
+        lines.push('-'.repeat(80));
+        estimate.assumptions.forEach(assumption => {
+            lines.push(`• ${assumption}`);
+        });
+        lines.push('='.repeat(80));
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Calculate tiered cost (e.g., for data transfer)
+     * Used by formula helper function
+     */
+    private calculateTieredCost(usage: number, tiers: UsageTier[]): number {
+        let totalCost = 0;
+        let remaining = usage;
+
+        for (const tier of tiers) {
+            if (remaining <= 0) break;
+
+            const tierMax = tier.max ?? Infinity;
+            const tierCapacity = tierMax - tier.min;
+            const tierUsage = Math.min(remaining, tierCapacity);
+
+            totalCost += tierUsage * tier.rate;
+            remaining -= tierUsage;
+        }
+
+        return totalCost;
     }
 }
 

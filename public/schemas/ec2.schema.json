@@ -1,0 +1,521 @@
+{
+    "service": "ec2",
+    "version": "1.0.0",
+    "metadata": {
+        "displayName": "Amazon EC2",
+        "description": "Elastic Compute Cloud instance and storage cost estimation",
+        "category": "Compute",
+        "icon": "ec2",
+        "documentation": "https://aws.amazon.com/ec2/pricing/"
+    },
+    "fields": [
+        {
+            "id": "instance_name",
+            "label": "Instance Name",
+            "type": "string",
+            "description": "Identifier for this EC2 instance",
+            "required": true,
+            "default": "my-instance"
+        },
+        {
+            "id": "instance_family",
+            "label": "Instance Family",
+            "type": "enum",
+            "description": "EC2 instance family",
+            "required": true,
+            "default": "t3",
+            "optionsSource": "ec2/instance-families",
+            "options": [
+                {
+                    "value": "t3",
+                    "label": "T3 - Burstable Performance"
+                },
+                {
+                    "value": "t4g",
+                    "label": "T4g - Burstable (Graviton)"
+                },
+                {
+                    "value": "m5",
+                    "label": "M5 - General Purpose"
+                },
+                {
+                    "value": "m6i",
+                    "label": "M6i - General Purpose (Intel)"
+                },
+                {
+                    "value": "m7g",
+                    "label": "M7g - General Purpose (Graviton3)"
+                },
+                {
+                    "value": "c5",
+                    "label": "C5 - Compute Optimized"
+                },
+                {
+                    "value": "c6i",
+                    "label": "C6i - Compute Optimized (Intel)"
+                },
+                {
+                    "value": "c7g",
+                    "label": "C7g - Compute Optimized (Graviton3)"
+                },
+                {
+                    "value": "r5",
+                    "label": "R5 - Memory Optimized"
+                },
+                {
+                    "value": "r6i",
+                    "label": "R6i - Memory Optimized (Intel)"
+                },
+                {
+                    "value": "r7g",
+                    "label": "R7g - Memory Optimized (Graviton3)"
+                }
+            ],
+            "pricingAttribute": "instanceFamily"
+        },
+        {
+            "id": "instance_size",
+            "label": "Instance Size",
+            "type": "enum",
+            "description": "EC2 instance size",
+            "required": true,
+            "default": "medium",
+            "options": [
+                {
+                    "value": "nano",
+                    "label": "nano"
+                },
+                {
+                    "value": "micro",
+                    "label": "micro"
+                },
+                {
+                    "value": "small",
+                    "label": "small"
+                },
+                {
+                    "value": "medium",
+                    "label": "medium"
+                },
+                {
+                    "value": "large",
+                    "label": "large"
+                },
+                {
+                    "value": "xlarge",
+                    "label": "xlarge"
+                },
+                {
+                    "value": "2xlarge",
+                    "label": "2xlarge"
+                },
+                {
+                    "value": "4xlarge",
+                    "label": "4xlarge"
+                },
+                {
+                    "value": "8xlarge",
+                    "label": "8xlarge"
+                },
+                {
+                    "value": "16xlarge",
+                    "label": "16xlarge"
+                }
+            ],
+            "pricingAttribute": "instanceSize"
+        },
+        {
+            "id": "operating_system",
+            "label": "Operating System",
+            "type": "enum",
+            "description": "Operating system for the instance",
+            "required": true,
+            "default": "linux",
+            "options": [
+                {
+                    "value": "linux",
+                    "label": "Linux/UNIX"
+                },
+                {
+                    "value": "windows",
+                    "label": "Windows"
+                },
+                {
+                    "value": "rhel",
+                    "label": "Red Hat Enterprise Linux"
+                },
+                {
+                    "value": "suse",
+                    "label": "SUSE Linux"
+                },
+                {
+                    "value": "ubuntu_pro",
+                    "label": "Ubuntu Pro"
+                }
+            ],
+            "pricingAttribute": "operatingSystem"
+        },
+        {
+            "id": "tenancy",
+            "label": "Tenancy",
+            "type": "enum",
+            "description": "Instance tenancy",
+            "required": false,
+            "default": "shared",
+            "options": [
+                {
+                    "value": "shared",
+                    "label": "Shared",
+                    "description": "Run on shared hardware"
+                },
+                {
+                    "value": "dedicated",
+                    "label": "Dedicated Instance",
+                    "description": "Run on dedicated hardware"
+                },
+                {
+                    "value": "host",
+                    "label": "Dedicated Host",
+                    "description": "Run on a dedicated physical server"
+                }
+            ],
+            "pricingAttribute": "tenancy"
+        },
+        {
+            "id": "ebs_volumes",
+            "label": "EBS Volumes",
+            "type": "array",
+            "description": "Attached EBS volumes",
+            "required": false,
+            "default": [
+                {
+                    "type": "gp3",
+                    "size_gb": 30,
+                    "iops": 3000,
+                    "throughput_mbps": 125
+                }
+            ],
+            "fields": [
+                {
+                    "id": "volume_type",
+                    "label": "Volume Type",
+                    "type": "enum",
+                    "required": true,
+                    "default": "gp3",
+                    "options": [
+                        {
+                            "value": "gp3",
+                            "label": "gp3 - General Purpose SSD"
+                        },
+                        {
+                            "value": "gp2",
+                            "label": "gp2 - General Purpose SSD (Previous Gen)"
+                        },
+                        {
+                            "value": "io2",
+                            "label": "io2 - Provisioned IOPS SSD"
+                        },
+                        {
+                            "value": "io1",
+                            "label": "io1 - Provisioned IOPS SSD (Previous Gen)"
+                        },
+                        {
+                            "value": "st1",
+                            "label": "st1 - Throughput Optimized HDD"
+                        },
+                        {
+                            "value": "sc1",
+                            "label": "sc1 - Cold HDD"
+                        }
+                    ],
+                    "pricingAttribute": "volumeType"
+                },
+                {
+                    "id": "size_gb",
+                    "label": "Size (GB)",
+                    "type": "number",
+                    "required": true,
+                    "default": 30,
+                    "validation": {
+                        "min": 1,
+                        "max": 16384
+                    }
+                },
+                {
+                    "id": "iops",
+                    "label": "Provisioned IOPS",
+                    "type": "number",
+                    "required": false,
+                    "default": 3000,
+                    "validation": {
+                        "min": 3000,
+                        "max": 64000
+                    },
+                    "visibleWhen": {
+                        "operator": "in",
+                        "field": "volume_type",
+                        "value": [
+                            "gp3",
+                            "io1",
+                            "io2"
+                        ]
+                    }
+                },
+                {
+                    "id": "throughput_mbps",
+                    "label": "Throughput (MB/s)",
+                    "type": "number",
+                    "required": false,
+                    "default": 125,
+                    "validation": {
+                        "min": 125,
+                        "max": 1000
+                    },
+                    "visibleWhen": {
+                        "operator": "eq",
+                        "field": "volume_type",
+                        "value": "gp3"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "enable_elastic_ip",
+            "label": "Elastic IP",
+            "type": "boolean",
+            "description": "Allocate Elastic IP address",
+            "required": false,
+            "default": false
+        },
+        {
+            "id": "enable_detailed_monitoring",
+            "label": "Detailed Monitoring",
+            "type": "boolean",
+            "description": "Enable detailed CloudWatch monitoring (1-minute intervals)",
+            "required": false,
+            "default": false
+        }
+    ],
+    "groups": [
+        {
+            "id": "instance",
+            "label": "Instance Configuration",
+            "fields": [
+                "instance_name",
+                "instance_family",
+                "instance_size",
+                "operating_system",
+                "tenancy"
+            ],
+            "defaultExpanded": true
+        },
+        {
+            "id": "storage",
+            "label": "Storage",
+            "fields": [
+                "ebs_volumes"
+            ],
+            "defaultExpanded": true
+        },
+        {
+            "id": "networking",
+            "label": "Networking",
+            "fields": [
+                "enable_elastic_ip"
+            ],
+            "defaultExpanded": false
+        },
+        {
+            "id": "monitoring",
+            "label": "Monitoring",
+            "fields": [
+                "enable_detailed_monitoring"
+            ],
+            "defaultExpanded": false
+        }
+    ],
+    "usage": [
+        {
+            "id": "hours_per_month",
+            "label": "Running Hours per Month",
+            "unit": "hours",
+            "type": "slider",
+            "min": 0,
+            "max": 730,
+            "default": 730,
+            "step": 10,
+            "presets": {
+                "low": 168,
+                "medium": 365,
+                "high": 730
+            },
+            "description": "Number of hours the instance runs per month (730 = 24/7)"
+        },
+        {
+            "id": "data_transfer_out_gb",
+            "label": "Data Transfer Out",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 10000,
+            "default": 100,
+            "step": 10,
+            "presets": {
+                "low": 50,
+                "medium": 500,
+                "high": 2000
+            },
+            "description": "Data transferred out to internet per month"
+        },
+        {
+            "id": "ebs_snapshot_gb",
+            "label": "EBS Snapshots",
+            "unit": "GB",
+            "type": "slider",
+            "min": 0,
+            "max": 5000,
+            "default": 0,
+            "step": 10,
+            "presets": {
+                "low": 0,
+                "medium": 100,
+                "high": 500
+            },
+            "description": "Total size of EBS snapshots stored"
+        }
+    ],
+    "pricing": [
+        {
+            "attribute": "instance_hourly",
+            "source": "instance-pricing"
+        },
+        {
+            "attribute": "ebs_gp3_storage",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "gp3"
+            }
+        },
+        {
+            "attribute": "ebs_gp3_iops",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "gp3",
+                "usageType": "IOPS"
+            }
+        },
+        {
+            "attribute": "ebs_gp3_throughput",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "gp3",
+                "usageType": "Throughput"
+            }
+        },
+        {
+            "attribute": "ebs_gp2_storage",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "gp2"
+            }
+        },
+        {
+            "attribute": "ebs_io2_storage",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "io2"
+            }
+        },
+        {
+            "attribute": "ebs_io2_iops",
+            "source": "ebs-pricing",
+            "filters": {
+                "volumeType": "io2",
+                "usageType": "IOPS"
+            }
+        },
+        {
+            "attribute": "ebs_snapshot",
+            "source": "ebs-pricing",
+            "filters": {
+                "usageType": "Snapshot"
+            }
+        },
+        {
+            "attribute": "elastic_ip",
+            "source": "elastic-ip-pricing"
+        },
+        {
+            "attribute": "detailed_monitoring",
+            "source": "cloudwatch-pricing",
+            "filters": {
+                "usageType": "MetricMonitorUsage"
+            }
+        },
+        {
+            "attribute": "data_transfer_out",
+            "source": "data-transfer",
+            "filters": {
+                "transferType": "out-to-internet"
+            }
+        }
+    ],
+    "formulas": [
+        {
+            "id": "instance_cost",
+            "label": "EC2 Instance",
+            "formula": "instance_hourly * hours_per_month * (tenancy === 'dedicated' ? 1.5 : tenancy === 'host' ? 2.0 : 1.0)",
+            "unit": "USD/month",
+            "description": "EC2 instance hourly charges with tenancy multiplier"
+        },
+        {
+            "id": "ebs_storage_cost",
+            "label": "EBS Storage",
+            "formula": "ebs_volumes.reduce((sum, vol) => sum + (vol.size_gb * (ebs_[vol.volume_type]_storage || 0)), 0)",
+            "unit": "USD/month",
+            "description": "EBS volume storage charges"
+        },
+        {
+            "id": "ebs_iops_cost",
+            "label": "EBS Provisioned IOPS",
+            "formula": "ebs_volumes.reduce((sum, vol) => sum + ((vol.iops > 3000 ? (vol.iops - 3000) : 0) * (ebs_[vol.volume_type]_iops || 0)), 0)",
+            "unit": "USD/month",
+            "description": "EBS provisioned IOPS charges (above baseline)"
+        },
+        {
+            "id": "ebs_throughput_cost",
+            "label": "EBS Throughput",
+            "formula": "ebs_volumes.reduce((sum, vol) => sum + ((vol.throughput_mbps > 125 ? (vol.throughput_mbps - 125) : 0) * (ebs_gp3_throughput || 0)), 0)",
+            "unit": "USD/month",
+            "description": "EBS gp3 throughput charges (above baseline)"
+        },
+        {
+            "id": "ebs_snapshot_cost",
+            "label": "EBS Snapshots",
+            "formula": "ebs_snapshot * ebs_snapshot_gb",
+            "unit": "USD/month",
+            "description": "EBS snapshot storage charges"
+        },
+        {
+            "id": "elastic_ip_cost",
+            "label": "Elastic IP",
+            "formula": "enable_elastic_ip ? (elastic_ip * HOURS_PER_MONTH) : 0",
+            "unit": "USD/month",
+            "description": "Elastic IP charges when instance is running"
+        },
+        {
+            "id": "detailed_monitoring_cost",
+            "label": "Detailed Monitoring",
+            "formula": "enable_detailed_monitoring ? (detailed_monitoring * 7) : 0",
+            "unit": "USD/month",
+            "description": "CloudWatch detailed monitoring (7 metrics per instance)"
+        },
+        {
+            "id": "data_transfer_cost",
+            "label": "Data Transfer Out",
+            "formula": "data_transfer_out * data_transfer_out_gb",
+            "unit": "USD/month",
+            "description": "Data transfer out to internet"
+        }
+    ]
+}

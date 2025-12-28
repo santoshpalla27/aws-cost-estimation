@@ -1,152 +1,193 @@
-import { useState, useEffect } from 'react';
-import { ServiceSchema, ServiceFormState, CostEstimate } from '@types/schema.types';
-import ServiceConfigurator from '@ui/ServiceConfigurator';
-import CostBreakdown from '@ui/CostBreakdown';
+import React, { useState, useEffect } from 'react';
+import { SchemaEngine } from '@/schema/schema.engine';
+import { ServiceSchema } from '@/schema/schema.contract';
+import { UsageEngine } from '@/engine/usage.engine';
+import { pricingEngine } from '@/engine/pricing.engine';
+import { calculatorEngine, CostEstimate } from '@/engine/calculator.engine';
+import './index.css';
+import './App.css';
 
-// AWS Regions
-const AWS_REGIONS = [
-    { value: 'us-east-1', label: 'US East (N. Virginia)' },
-    { value: 'us-east-2', label: 'US East (Ohio)' },
-    { value: 'us-west-1', label: 'US West (N. California)' },
-    { value: 'us-west-2', label: 'US West (Oregon)' },
-    { value: 'eu-west-1', label: 'Europe (Ireland)' },
-    { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
-    { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
-    { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' },
+// Import UI components
+import ServiceConfigurator from './ui/ServiceConfigurator';
+import CostBreakdown from './ui/CostBreakdown';
+
+const AVAILABLE_SERVICES = [
+    { id: 'vpc', name: 'Amazon VPC' },
+    { id: 'ec2', name: 'Amazon EC2' },
 ];
 
-// Available Services
-const SERVICES = [
-    { value: 'vpc', label: 'Amazon VPC', icon: '🌐' },
-    { value: 'ec2', label: 'Amazon EC2', icon: '💻' },
+const AVAILABLE_REGIONS = [
+    { id: 'us-east-1', name: 'US East (N. Virginia)' },
+    { id: 'us-east-2', name: 'US East (Ohio)' },
+    { id: 'us-west-1', name: 'US West (N. California)' },
+    { id: 'us-west-2', name: 'US West (Oregon)' },
+    { id: 'eu-west-1', name: 'Europe (Ireland)' },
+    { id: 'eu-central-1', name: 'Europe (Frankfurt)' },
+    { id: 'ap-southeast-1', name: 'Asia Pacific (Singapore)' },
+    { id: 'ap-northeast-1', name: 'Asia Pacific (Tokyo)' },
 ];
 
 function App() {
-    const [selectedService, setSelectedService] = useState<string>('vpc');
-    const [selectedRegion, setSelectedRegion] = useState<string>('us-east-1');
+    const [selectedService, setSelectedService] = useState('vpc');
+    const [selectedRegion, setSelectedRegion] = useState('us-east-1');
+    const [schemaEngine] = useState(() => new SchemaEngine());
+    const [usageEngine] = useState(() => new UsageEngine());
     const [schema, setSchema] = useState<ServiceSchema | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [estimate, setEstimate] = useState<CostEstimate | null>(null);
 
     // Load schema when service changes
     useEffect(() => {
-        loadSchema(selectedService);
+        loadSchema();
     }, [selectedService]);
 
-    const loadSchema = async (service: string) => {
+    // Load pricing data when region changes
+    useEffect(() => {
+        loadPricingData();
+    }, [selectedService, selectedRegion]);
+
+    const loadSchema = async () => {
         setLoading(true);
         setError(null);
 
         try {
-            const response = await fetch(`/src/schemas/${service}.schema.json`);
+            const response = await fetch(`/schemas/${selectedService}.schema.json`);
 
             if (!response.ok) {
                 throw new Error(`Failed to load schema: ${response.statusText}`);
             }
 
-            const schemaData: ServiceSchema = await response.json();
-            setSchema(schemaData);
+            const schemaData = await response.json();
+
+            // Load and validate schema
+            await schemaEngine.load(schemaData);
+            setSchema(schemaEngine.getSchema());
+
+            // Initialize usage engine with schema dimensions
+            usageEngine.initialize(schemaEngine.getUsageDimensions());
+
+            setLoading(false);
         } catch (err) {
+            console.error('Error loading schema:', err);
             setError(err instanceof Error ? err.message : 'Failed to load schema');
-            setSchema(null);
-        } finally {
             setLoading(false);
         }
     };
 
-    const handleEstimateUpdate = (newEstimate: CostEstimate) => {
-        setEstimate(newEstimate);
+    const loadPricingData = async () => {
+        try {
+            await pricingEngine.load(selectedService, selectedRegion);
+        } catch (err) {
+            console.error('Error loading pricing data:', err);
+            // Non-fatal - continue with schema
+        }
+    };
+
+    const handleCalculate = async (formState: Record<string, unknown>) => {
+        if (!schema) return;
+
+        try {
+            const usageState = usageEngine.getState();
+            const formulas = schemaEngine.getFormulas();
+
+            const newEstimate = await calculatorEngine.calculate(
+                selectedService,
+                selectedRegion,
+                formulas,
+                formState,
+                usageState
+            );
+
+            setEstimate(newEstimate);
+        } catch (err) {
+            console.error('Error calculating costs:', err);
+        }
     };
 
     return (
-        <div className="container">
-            {/* Header */}
-            <header style={{ marginBottom: 'var(--spacing-2xl)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-                    <div style={{ fontSize: '2.5rem' }}>☁️</div>
-                    <div>
-                        <h1 style={{ marginBottom: 'var(--spacing-xs)' }}>AWS Cost Estimator</h1>
-                        <p style={{ margin: 0, color: 'var(--color-text-tertiary)' }}>
-                            Production-grade cost estimation for AWS services
-                        </p>
-                    </div>
-                </div>
-
-                {/* Service & Region Selector */}
-                <div className="card">
-                    <div className="grid grid-2">
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label">Service</label>
-                            <select
-                                className="form-select"
-                                value={selectedService}
-                                onChange={(e) => setSelectedService(e.target.value)}
-                            >
-                                {SERVICES.map((service) => (
-                                    <option key={service.value} value={service.value}>
-                                        {service.icon} {service.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                            <label className="form-label">Region</label>
-                            <select
-                                className="form-select"
-                                value={selectedRegion}
-                                onChange={(e) => setSelectedRegion(e.target.value)}
-                            >
-                                {AWS_REGIONS.map((region) => (
-                                    <option key={region.value} value={region.value}>
-                                        {region.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+        <div className="app">
+            <header className="app-header">
+                <div className="container">
+                    <h1>AWS Cost Estimator</h1>
+                    <p className="subtitle">Production-grade, schema-driven cost estimation</p>
                 </div>
             </header>
 
-            {/* Main Content */}
-            {loading && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--spacing-2xl)' }}>
-                    <div className="spinner" />
-                </div>
-            )}
-
-            {error && (
-                <div className="alert alert-error">
-                    <strong>Error:</strong> {error}
-                </div>
-            )}
-
-            {schema && !loading && (
-                <div className="grid" style={{ gridTemplateColumns: '1fr 400px', gap: 'var(--spacing-xl)', alignItems: 'start' }}>
-                    {/* Configuration Panel */}
-                    <div>
-                        <ServiceConfigurator
-                            schema={schema}
-                            region={selectedRegion}
-                            onEstimateUpdate={handleEstimateUpdate}
-                        />
+            <div className="container">
+                <div className="controls">
+                    <div className="control-group">
+                        <label htmlFor="service-select">Service</label>
+                        <select
+                            id="service-select"
+                            className="form-select"
+                            value={selectedService}
+                            onChange={(e) => setSelectedService(e.target.value)}
+                        >
+                            {AVAILABLE_SERVICES.map((service) => (
+                                <option key={service.id} value={service.id}>
+                                    {service.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    {/* Cost Breakdown Panel */}
-                    <div style={{ position: 'sticky', top: 'var(--spacing-lg)' }}>
-                        <CostBreakdown estimate={estimate} />
+                    <div className="control-group">
+                        <label htmlFor="region-select">Region</label>
+                        <select
+                            id="region-select"
+                            className="form-select"
+                            value={selectedRegion}
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                        >
+                            {AVAILABLE_REGIONS.map((region) => (
+                                <option key={region.id} value={region.id}>
+                                    {region.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
-            )}
 
-            {/* Footer */}
-            <footer style={{ marginTop: 'var(--spacing-2xl)', paddingTop: 'var(--spacing-xl)', borderTop: '1px solid var(--color-border)', textAlign: 'center' }}>
-                <p className="text-muted" style={{ fontSize: 'var(--font-size-sm)' }}>
-                    Pricing data is for estimation purposes only. Actual costs may vary.
-                    <br />
-                    Last updated: {new Date().toLocaleDateString()}
-                </p>
+                {loading && (
+                    <div className="loading">
+                        <div className="spinner"></div>
+                        <p>Loading schema...</p>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="error-banner">
+                        <strong>Error:</strong> {error}
+                    </div>
+                )}
+
+                {!loading && !error && schema && (
+                    <div className="main-content">
+                        <div className="configurator-panel">
+                            <ServiceConfigurator
+                                schemaEngine={schemaEngine}
+                                usageEngine={usageEngine}
+                                onCalculate={handleCalculate}
+                            />
+                        </div>
+
+                        <div className="breakdown-panel">
+                            <CostBreakdown
+                                estimate={estimate}
+                                loading={false}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <footer className="app-footer">
+                <div className="container">
+                    <p>
+                        Schema-driven architecture • No AWS SDK in browser • Fully static deployment
+                    </p>
+                </div>
             </footer>
         </div>
     );

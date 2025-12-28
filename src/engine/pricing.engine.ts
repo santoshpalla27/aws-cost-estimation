@@ -1,49 +1,22 @@
-import { PricingData } from '@types/schema.types';
-
-/**
- * Pricing lookup key
- */
-export interface PricingKey {
-    [attribute: string]: string | number;
-}
-
-/**
- * Pricing record
- */
-export interface PricingRecord {
-    sku: string;
-    price: number;
-    unit: string;
-    currency: string;
-    attributes: Record<string, unknown>;
-    tiers?: Array<{
-        min: number;
-        max?: number;
-        price: number;
-    }>;
-}
+import { PricingData, PricingRecord, PricingQuery } from '../../pricing-pipeline/src/contracts/pricing.contract';
 
 /**
  * Pricing Engine
  * 
- * Loads and queries static pricing data
+ * Loads and queries static pricing data.
+ * Completely generic - no service-specific logic.
  */
 export class PricingEngine {
-    private pricingCache: Map<string, PricingData> = new Map();
-    private indexCache: Map<string, Map<string, PricingRecord[]>> = new Map();
+    private data: Map<string, PricingData> = new Map();
 
     /**
      * Load pricing data for a service and region
      */
-    async loadPricing(service: string, region: string, dataPath: string): Promise<void> {
-        const cacheKey = `${service}:${region}:${dataPath}`;
-
-        if (this.pricingCache.has(cacheKey)) {
-            return; // Already loaded
-        }
+    async load(service: string, region: string): Promise<void> {
+        const key = `${service}:${region}`;
 
         try {
-            const response = await fetch(`/pricing/${service}/${dataPath}.json`);
+            const response = await fetch(`/pricing/${service}/${region}.json`);
 
             if (!response.ok) {
                 throw new Error(`Failed to load pricing data: ${response.statusText}`);
@@ -51,188 +24,120 @@ export class PricingEngine {
 
             const data: PricingData = await response.json();
 
-            // Validate region
-            if (data.region !== region && data.region !== 'global') {
-                console.warn(`Pricing data region mismatch: expected ${region}, got ${data.region}`);
+            // Validate metadata
+            if (data.metadata.service !== service || data.metadata.region !== region) {
+                console.warn(`Pricing data metadata mismatch for ${key}`);
             }
 
-            this.pricingCache.set(cacheKey, data);
-            this.buildIndex(cacheKey, data);
+            this.data.set(key, data);
+
+            console.log(`✓ Loaded pricing data: ${service} in ${region} (${data.metadata.recordCount} records)`);
         } catch (error) {
-            console.error(`Error loading pricing data for ${cacheKey}:`, error);
+            console.error(`Failed to load pricing data for ${key}:`, error);
             throw error;
         }
     }
 
     /**
-     * Build index for fast lookups
+     * Query pricing records by dimensions
      */
-    private buildIndex(cacheKey: string, data: PricingData): void {
-        const index = new Map<string, PricingRecord[]>();
+    query(service: string, region: string, query: PricingQuery): PricingRecord[] {
+        const key = `${service}:${region}`;
+        const data = this.data.get(key);
 
-        // Assuming data.data is an array of pricing records
-        const records = Array.isArray(data.data) ? data.data : Object.values(data.data);
-
-        for (const record of records) {
-            if (!this.isPricingRecord(record)) {
-                continue;
-            }
-
-            // Index by each attribute
-            for (const [attr, value] of Object.entries(record.attributes)) {
-                const key = `${attr}:${value}`;
-
-                if (!index.has(key)) {
-                    index.set(key, []);
-                }
-
-                index.get(key)!.push(record);
-            }
+        if (!data) {
+            console.warn(`Pricing data not loaded for ${key}`);
+            return [];
         }
 
-        this.indexCache.set(cacheKey, index);
-    }
+        const matchMode = query.matchMode || 'all';
 
-    /**
-     * Type guard for pricing records
-     */
-    private isPricingRecord(obj: unknown): obj is PricingRecord {
-        return (
-            typeof obj === 'object' &&
-            obj !== null &&
-            'price' in obj &&
-            'attributes' in obj
-        );
-    }
-
-    /**
-     * Lookup pricing by attributes
-     */
-    lookup(
-        service: string,
-        region: string,
-        dataPath: string,
-        attributes: PricingKey
-    ): PricingRecord | null {
-        const cacheKey = `${service}:${region}:${dataPath}`;
-        const index = this.indexCache.get(cacheKey);
-
-        if (!index) {
-            console.warn(`Pricing data not loaded for ${cacheKey}`);
-            return null;
-        }
-
-        // Get all records that match the first attribute
-        const firstAttr = Object.entries(attributes)[0];
-        if (!firstAttr) {
-            return null;
-        }
-
-        const [firstKey, firstValue] = firstAttr;
-        const candidates = index.get(`${firstKey}:${firstValue}`) || [];
-
-        // Filter candidates by all attributes
-        const matches = candidates.filter(record => {
-            return Object.entries(attributes).every(([key, value]) => {
-                return record.attributes[key] === value;
+        return data.records.filter(record => {
+            const matches = Object.entries(query.dimensions).map(([dimKey, dimValue]) => {
+                return record.dimensions[dimKey] === dimValue;
             });
+
+            return matchMode === 'all'
+                ? matches.every(m => m)
+                : matches.some(m => m);
         });
+    }
 
-        if (matches.length === 0) {
-            console.warn(`No pricing found for ${cacheKey} with attributes:`, attributes);
-            return null;
-        }
-
-        if (matches.length > 1) {
-            console.warn(`Multiple pricing records found for ${cacheKey}, using first match`);
-        }
-
-        return matches[0];
+    /**
+     * Get single pricing record (first match)
+     */
+    getPrice(service: string, region: string, dimensions: Record<string, string | number>): PricingRecord | null {
+        const results = this.query(service, region, { dimensions, matchMode: 'all' });
+        return results.length > 0 ? results[0] : null;
     }
 
     /**
      * Calculate tiered pricing
      */
-    calculateTieredPrice(record: PricingRecord, quantity: number): number {
+    calculateTiered(record: PricingRecord, quantity: number): number {
         if (!record.tiers || record.tiers.length === 0) {
-            return record.price * quantity;
+            // Simple pricing
+            return record.price.usd * quantity;
         }
 
         let totalCost = 0;
         let remaining = quantity;
 
         for (const tier of record.tiers) {
-            const tierMin = tier.min;
-            const tierMax = tier.max ?? Infinity;
-            const tierSize = tierMax - tierMin;
+            const tierSize = tier.max !== undefined ? tier.max - tier.min : Infinity;
+            const quantityInTier = Math.min(remaining, tierSize);
 
-            if (remaining <= 0) {
-                break;
+            if (quantityInTier > 0) {
+                totalCost += quantityInTier * tier.pricePerUnit;
+                remaining -= quantityInTier;
             }
 
-            const quantityInTier = Math.min(remaining, tierSize);
-            totalCost += quantityInTier * tier.price;
-            remaining -= quantityInTier;
+            if (remaining <= 0) break;
         }
 
         return totalCost;
     }
 
     /**
-     * Get all available options for an attribute
+     * Get all loaded pricing data keys
      */
-    getAttributeOptions(
-        service: string,
-        region: string,
-        dataPath: string,
-        attribute: string
-    ): Array<{ value: string | number; label: string }> {
-        const cacheKey = `${service}:${region}:${dataPath}`;
-        const data = this.pricingCache.get(cacheKey);
-
-        if (!data) {
-            return [];
-        }
-
-        const records = Array.isArray(data.data) ? data.data : Object.values(data.data);
-        const values = new Set<string | number>();
-
-        for (const record of records) {
-            if (this.isPricingRecord(record) && attribute in record.attributes) {
-                values.add(record.attributes[attribute] as string | number);
-            }
-        }
-
-        return Array.from(values).map(value => ({
-            value,
-            label: String(value),
-        }));
+    getLoadedKeys(): string[] {
+        return Array.from(this.data.keys());
     }
 
     /**
-     * Clear cache
+     * Check if pricing data is loaded
      */
-    clearCache(): void {
-        this.pricingCache.clear();
-        this.indexCache.clear();
+    isLoaded(service: string, region: string): boolean {
+        return this.data.has(`${service}:${region}`);
     }
 
     /**
-     * Get pricing data version
+     * Get pricing metadata
      */
-    getVersion(service: string, region: string, dataPath: string): string | null {
-        const cacheKey = `${service}:${region}:${dataPath}`;
-        const data = this.pricingCache.get(cacheKey);
-        return data?.version ?? null;
+    getMetadata(service: string, region: string) {
+        const data = this.data.get(`${service}:${region}`);
+        return data?.metadata;
     }
 
     /**
-     * Get last updated timestamp
+     * Clear all loaded pricing data
      */
-    getLastUpdated(service: string, region: string, dataPath: string): string | null {
-        const cacheKey = `${service}:${region}:${dataPath}`;
-        const data = this.pricingCache.get(cacheKey);
-        return data?.lastUpdated ?? null;
+    clear(): void {
+        this.data.clear();
+    }
+
+    /**
+     * Preload pricing data for multiple services/regions
+     */
+    async preload(services: Array<{ service: string; region: string }>): Promise<void> {
+        const promises = services.map(({ service, region }) =>
+            this.load(service, region).catch(error => {
+                console.error(`Failed to preload ${service}:${region}`, error);
+            })
+        );
+
+        await Promise.all(promises);
     }
 }
 
