@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SchemaEngine } from '@/schema/schema.engine';
+import { SchemaEngine, ValidationError } from '@/schema/schema.engine';
 import { ServiceSchema } from '@/schema/schema.contract';
 import { UsageEngine } from '@/engine/usage.engine';
 import { pricingEngine } from '@/engine/pricing.engine';
@@ -36,6 +36,7 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [estimate, setEstimate] = useState<CostEstimate | null>(null);
+    const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
     // Load schema when service changes
     useEffect(() => {
@@ -88,14 +89,33 @@ function App() {
         if (!schema) return;
 
         try {
+            // Execute dependency cascade to ensure state is consistent
+            const cascadedState = schemaEngine.executeDependencyCascade(formState);
+
+            // Update active usage dimensions based on cascaded state
+            const activeUsage = schemaEngine.getActiveUsageDimensions(cascadedState);
+            const activeDimensionIds = activeUsage.map(d => d.id);
+
+            // Update usage engine with active dimensions
+            for (const dimId of Object.keys(usageEngine.getState())) {
+                if (!activeDimensionIds.includes(dimId)) {
+                    usageEngine.setValue(dimId, 0);
+                }
+            }
+
+            // Validate form state
+            const errors = schemaEngine.getValidationErrors(cascadedState);
+            setValidationErrors(errors);
+
+            // Get active formulas based on cascaded state
+            const activeFormulas = schemaEngine.getActiveFormulas(cascadedState);
             const usageState = usageEngine.getState();
-            const formulas = schemaEngine.getFormulas();
 
             const newEstimate = await calculatorEngine.calculate(
                 selectedService,
                 selectedRegion,
-                formulas,
-                formState,
+                activeFormulas,
+                cascadedState,
                 usageState
             );
 

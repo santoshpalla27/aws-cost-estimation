@@ -36,6 +36,66 @@ export interface TieredUsageBreakdown {
 }
 
 /**
+ * Usage profile definition
+ */
+export interface UsageProfile {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    multipliers: Record<string, number>; // dimension_id -> multiplier
+    overrides?: Record<string, number>;  // dimension_id -> absolute value
+}
+
+/**
+ * Predefined usage profiles for common deployment scenarios
+ */
+export const USAGE_PROFILES: Record<string, UsageProfile> = {
+    development: {
+        id: 'development',
+        name: 'Development',
+        description: 'Low usage for development/testing environments (9-5, weekdays)',
+        icon: '🔧',
+        multipliers: {
+            hours_per_month: 0.3,        // ~220 hours (9-5, weekdays)
+            data_transfer_out_gb: 0.2,   // Minimal traffic
+            nat_data_processed_gb: 0.2,
+            cross_az_data_transfer_gb: 0.1,
+            flow_logs_gb: 0.2,
+            ebs_snapshot_gb: 0.3
+        }
+    },
+    staging: {
+        id: 'staging',
+        name: 'Staging',
+        description: 'Medium usage for staging/QA environments (12-hour days)',
+        icon: '🧪',
+        multipliers: {
+            hours_per_month: 0.6,        // ~440 hours (12-hour days)
+            data_transfer_out_gb: 0.5,
+            nat_data_processed_gb: 0.5,
+            cross_az_data_transfer_gb: 0.4,
+            flow_logs_gb: 0.5,
+            ebs_snapshot_gb: 0.6
+        }
+    },
+    production: {
+        id: 'production',
+        name: 'Production',
+        description: 'High usage for production environments (24/7 uptime)',
+        icon: '🚀',
+        multipliers: {
+            hours_per_month: 1.0,        // 730 hours (24/7)
+            data_transfer_out_gb: 1.0,
+            nat_data_processed_gb: 1.0,
+            cross_az_data_transfer_gb: 1.0,
+            flow_logs_gb: 1.0,
+            ebs_snapshot_gb: 1.0
+        }
+    }
+};
+
+/**
  * Usage Engine
  * 
  * Manages usage dimensions and their values.
@@ -336,5 +396,41 @@ export class UsageEngine {
         }
 
         return breakdown;
+    }
+
+    /**
+     * Apply a usage profile to current state
+     * Multiplies default values by profile multipliers or sets absolute overrides
+     */
+    applyProfile(profileId: string): void {
+        const profile = USAGE_PROFILES[profileId];
+        if (!profile) {
+            console.warn(`Unknown usage profile: ${profileId}`);
+            return;
+        }
+
+        for (const [dimensionId, dimension] of this.dimensions.entries()) {
+            const multiplier = profile.multipliers[dimensionId] ?? 1.0;
+            const override = profile.overrides?.[dimensionId];
+
+            if (override !== undefined) {
+                // Absolute override
+                this.setValue(dimensionId, override);
+            } else if (multiplier !== 1.0) {
+                // Apply multiplier to default value
+                const baseValue = dimension.default ?? 0;
+                this.setValue(dimensionId, baseValue * multiplier);
+            }
+        }
+
+        // Recalculate any calculated dimensions
+        this.recalculateAll();
+    }
+
+    /**
+     * Get available usage profiles
+     */
+    getAvailableProfiles(): UsageProfile[] {
+        return Object.values(USAGE_PROFILES);
     }
 }

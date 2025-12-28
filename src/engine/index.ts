@@ -1,25 +1,24 @@
-/**
- * Core Engines Export
- * 
- * All engines are completely generic and reusable.
- * NO service-specific logic allowed.
- */
+export { calculatorEngine, CalculatorEngine } from './calculator.engine';
+export type { CostEstimate, CostLineItem } from './calculator.engine';
 
-export * from './dependency.engine';
-export * from './usage.engine';
-export * from './pricing.engine';
-export * from './formula.parser';
-export * from './formula.evaluator';
-export * from './calculator.engine';
+export { pricingEngine, PricingEngine } from './pricing.engine';
+export type { PricingRecord } from './pricing.engine';
 
-// Re-export commonly used instances
-export { dependencyEngine } from './dependency.engine';
-export { pricingEngine } from './pricing.engine';
+export { UsageEngine, USAGE_PROFILES } from './usage.engine';
+export type { UsageState, UsagePreset, UsageTier, UsageProfile } from './usage.engine';
+
+export { derivedUsageEngine, DerivedUsageEngine, AWS_DERIVED_USAGE_RULES } from './derived-usage.engine';
+export type { DerivedUsageRule } from './derived-usage.engine';
+
+export { formulaEvaluator, FormulaEvaluator } from './formula.evaluator';
 export { formulaParser } from './formula.parser';
-export { formulaEvaluator } from './formula.evaluator';
-export { calculatorEngine } from './calculator.engine';
 
-// Re-export types
-export type { UsageState, UsagePreset } from './usage.engine';
-export type { FormulaContext } from './formula.evaluator';
-export type { CostLineItem, CostEstimate } from './calculator.engine';
+// Export tier constants for use in formulas
+export {
+    AWS_DATA_TRANSFER_TIERS,
+    EBS_GP3_IOPS_TIERS,
+    EBS_GP3_THROUGHPUT_TIERS,
+    CLOUDWATCH_METRICS_TIERS,
+    CLOUDWATCH_LOGS_TIERS,
+    S3_STANDARD_STORAGE_TIERS
+} from './calculator.engine';

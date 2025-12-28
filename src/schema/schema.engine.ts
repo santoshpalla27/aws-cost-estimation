@@ -17,6 +17,15 @@ export interface FormState {
 }
 
 /**
+ * Validation error with field context
+ */
+export interface ValidationError {
+    fieldId: string;
+    message: string;
+    severity: 'error' | 'warning' | 'info';
+}
+
+/**
  * Schema Engine
  * 
  * This is the authoritative engine that enforces schema rules.
@@ -389,5 +398,100 @@ export class SchemaEngine {
         }
 
         return state;
+    }
+
+    /**
+     * Execute full dependency cascade when form state changes
+     * Returns updated form state with cascaded changes
+     * 
+     * This method iteratively applies dependency rules until the state stabilizes:
+     * 1. Required-if enforcement: Set defaults for newly required fields
+     * 2. Visibility enforcement: Clear values for hidden fields
+     * 3. Enabled enforcement: Reset disabled fields to defaults
+     */
+    executeDependencyCascade(formState: FormState): FormState {
+        const updatedState = { ...formState };
+        let hasChanges = true;
+        let iterations = 0;
+        const MAX_ITERATIONS = 10;
+
+        // Iterate until no more changes or max iterations
+        while (hasChanges && iterations < MAX_ITERATIONS) {
+            hasChanges = false;
+            iterations++;
+
+            // Check each field for dependency-driven changes
+            for (const field of this.getFields()) {
+                // Handle visibility - clear value if field is no longer visible
+                if (!this.isFieldVisible(field.id, updatedState)) {
+                    if (updatedState[field.id] !== undefined) {
+                        delete updatedState[field.id];
+                        hasChanges = true;
+                    }
+                    continue; // Skip other checks if not visible
+                }
+
+                // Handle enabled state - reset to default if disabled
+                if (!this.isFieldEnabled(field.id, updatedState)) {
+                    if (updatedState[field.id] !== field.default) {
+                        updatedState[field.id] = field.default;
+                        hasChanges = true;
+                    }
+                    continue; // Skip required check if disabled
+                }
+
+                // Handle required-if enforcement - set default if required but empty
+                if (this.isFieldRequired(field.id, updatedState)) {
+                    const value = updatedState[field.id];
+                    if (value === undefined || value === null || value === '') {
+                        updatedState[field.id] = field.default ?? null;
+                        hasChanges = true;
+                    }
+                }
+            }
+        }
+
+        if (iterations >= MAX_ITERATIONS) {
+            console.warn('Dependency cascade reached max iterations - possible circular dependency');
+        }
+
+        return updatedState;
+    }
+
+    /**
+     * Get all validation errors including dependency-based errors
+     * Returns array of validation errors with field context
+     */
+    getValidationErrors(formState: FormState): ValidationError[] {
+        const errors: ValidationError[] = [];
+
+        for (const field of this.getFields()) {
+            // Only validate visible fields
+            if (!this.isFieldVisible(field.id, formState)) {
+                continue;
+            }
+
+            // Check required fields
+            if (this.isFieldRequired(field.id, formState)) {
+                const value = formState[field.id];
+                if (value === undefined || value === null || value === '') {
+                    errors.push({
+                        fieldId: field.id,
+                        message: `${field.label} is required`,
+                        severity: 'error'
+                    });
+                }
+            }
+
+            // Check field-specific warnings
+            const warnings = this.getFieldWarnings(field.id, formState);
+            errors.push(...warnings.map(w => ({
+                fieldId: field.id,
+                message: w.message,
+                severity: w.severity
+            })));
+        }
+
+        return errors;
     }
 }

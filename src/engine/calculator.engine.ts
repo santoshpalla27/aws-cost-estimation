@@ -15,6 +15,49 @@ export const AWS_DATA_TRANSFER_TIERS: UsageTier[] = [
 ];
 
 /**
+ * EBS GP3 IOPS Tiers (per IOPS-month)
+ */
+export const EBS_GP3_IOPS_TIERS: UsageTier[] = [
+    { min: 0, max: 3000, rate: 0 },            // Baseline included
+    { min: 3000, max: 16000, rate: 0.005 },    // Above baseline
+    { min: 16000, rate: 0.005 },               // Max IOPS
+];
+
+/**
+ * EBS GP3 Throughput Tiers (per MBps-month)
+ */
+export const EBS_GP3_THROUGHPUT_TIERS: UsageTier[] = [
+    { min: 0, max: 125, rate: 0 },             // Baseline included
+    { min: 125, max: 1000, rate: 0.04 },       // Above baseline
+];
+
+/**
+ * CloudWatch Metrics Tiers (per metric-month)
+ */
+export const CLOUDWATCH_METRICS_TIERS: UsageTier[] = [
+    { min: 0, max: 10000, rate: 0.30 },        // First 10K metrics
+    { min: 10000, rate: 0.10 },                // Over 10K metrics
+];
+
+/**
+ * CloudWatch Logs Ingestion Tiers (per GB)
+ */
+export const CLOUDWATCH_LOGS_TIERS: UsageTier[] = [
+    { min: 0, max: 10240, rate: 0.50 },        // First 10 TB
+    { min: 10240, max: 51200, rate: 0.25 },    // Next 40 TB
+    { min: 51200, rate: 0.10 },                // Over 50 TB
+];
+
+/**
+ * S3 Standard Storage Tiers (per GB-month)
+ */
+export const S3_STANDARD_STORAGE_TIERS: UsageTier[] = [
+    { min: 0, max: 51200, rate: 0.023 },       // First 50 TB
+    { min: 51200, max: 512000, rate: 0.022 },  // Next 450 TB
+    { min: 512000, rate: 0.021 },              // Over 500 TB
+];
+
+/**
  * Cost line item
  */
 export interface CostLineItem {

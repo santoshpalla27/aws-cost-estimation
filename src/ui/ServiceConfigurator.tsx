@@ -3,6 +3,7 @@ import { SchemaEngine, FormState } from '@/schema/schema.engine';
 import { UsageEngine, UsagePreset } from '@/engine/usage.engine';
 import DynamicField from './DynamicField';
 import UsageSlider from './UsageSlider';
+import UsageProfileSelector from './UsageProfileSelector';
 import './ServiceConfigurator.css';
 import './ServiceConfiguratorEnhanced.css';
 import './PresetButtons.css';
@@ -23,6 +24,7 @@ const ServiceConfigurator: React.FC<ServiceConfiguratorProps> = ({
     );
     const [usageState, setUsageState] = useState(() => usageEngine.getState());
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
     const schema = schemaEngine.getSchema();
     const groups = schemaEngine.getVisibleGroups(formState);
@@ -47,6 +49,12 @@ const ServiceConfigurator: React.FC<ServiceConfiguratorProps> = ({
 
     const handleUsagePreset = (preset: UsagePreset) => {
         usageEngine.applyPreset(preset);
+        setUsageState(usageEngine.getState());
+    };
+
+    const handleProfileSelect = (profileId: string) => {
+        setSelectedProfile(profileId);
+        usageEngine.applyProfile(profileId);
         setUsageState(usageEngine.getState());
     };
 
@@ -138,6 +146,13 @@ const ServiceConfigurator: React.FC<ServiceConfiguratorProps> = ({
                 <div className="usage-section">
                     <div className="usage-header">
                         <h3>Usage Assumptions</h3>
+
+                        {/* Usage Profile Selector */}
+                        <UsageProfileSelector
+                            selectedProfile={selectedProfile}
+                            onSelectProfile={handleProfileSelect}
+                        />
+
                         <div className="usage-presets">
                             <button
                                 className="btn-preset btn-preset-low"

@@ -6,7 +6,8 @@
         "description": "Elastic Compute Cloud instance and storage cost estimation",
         "category": "Compute",
         "icon": "ec2",
-        "documentation": "https://aws.amazon.com/ec2/pricing/"
+        "documentation": "https://aws.amazon.com/ec2/pricing/",
+        "version": "1.0.0"
     },
     "fields": [
         {
@@ -18,111 +19,211 @@
             "default": "my-instance"
         },
         {
-            "id": "instance_family",
-            "label": "Instance Family",
+            "id": "instance_type",
+            "label": "Instance Type",
             "type": "enum",
-            "description": "EC2 instance family",
+            "description": "EC2 instance type (family.size)",
             "required": true,
-            "default": "t3",
-            "optionsSource": "ec2/instance-families",
+            "default": "t3.medium",
             "options": [
                 {
-                    "value": "t3",
-                    "label": "T3 - Burstable Performance"
+                    "value": "t3.nano",
+                    "label": "t3.nano - Burstable"
                 },
                 {
-                    "value": "t4g",
-                    "label": "T4g - Burstable (Graviton)"
+                    "value": "t3.micro",
+                    "label": "t3.micro - Burstable"
                 },
                 {
-                    "value": "m5",
-                    "label": "M5 - General Purpose"
+                    "value": "t3.small",
+                    "label": "t3.small - Burstable"
                 },
                 {
-                    "value": "m6i",
-                    "label": "M6i - General Purpose (Intel)"
+                    "value": "t3.medium",
+                    "label": "t3.medium - Burstable"
                 },
                 {
-                    "value": "m7g",
-                    "label": "M7g - General Purpose (Graviton3)"
+                    "value": "t3.large",
+                    "label": "t3.large - Burstable"
                 },
                 {
-                    "value": "c5",
-                    "label": "C5 - Compute Optimized"
+                    "value": "t3.xlarge",
+                    "label": "t3.xlarge - Burstable"
                 },
                 {
-                    "value": "c6i",
-                    "label": "C6i - Compute Optimized (Intel)"
+                    "value": "t3.2xlarge",
+                    "label": "t3.2xlarge - Burstable"
                 },
                 {
-                    "value": "c7g",
-                    "label": "C7g - Compute Optimized (Graviton3)"
+                    "value": "t3a.medium",
+                    "label": "t3a.medium - Burstable (AMD)"
                 },
                 {
-                    "value": "r5",
-                    "label": "R5 - Memory Optimized"
+                    "value": "t3a.large",
+                    "label": "t3a.large - Burstable (AMD)"
                 },
                 {
-                    "value": "r6i",
-                    "label": "R6i - Memory Optimized (Intel)"
+                    "value": "t4g.medium",
+                    "label": "t4g.medium - Burstable (Graviton2)"
                 },
                 {
-                    "value": "r7g",
-                    "label": "R7g - Memory Optimized (Graviton3)"
+                    "value": "t4g.large",
+                    "label": "t4g.large - Burstable (Graviton2)"
+                },
+                {
+                    "value": "m5.large",
+                    "label": "m5.large - General Purpose"
+                },
+                {
+                    "value": "m5.xlarge",
+                    "label": "m5.xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.2xlarge",
+                    "label": "m5.2xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.4xlarge",
+                    "label": "m5.4xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.8xlarge",
+                    "label": "m5.8xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.12xlarge",
+                    "label": "m5.12xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.16xlarge",
+                    "label": "m5.16xlarge - General Purpose"
+                },
+                {
+                    "value": "m5.24xlarge",
+                    "label": "m5.24xlarge - General Purpose"
+                },
+                {
+                    "value": "m6i.large",
+                    "label": "m6i.large - General Purpose (Intel)"
+                },
+                {
+                    "value": "m6i.xlarge",
+                    "label": "m6i.xlarge - General Purpose (Intel)"
+                },
+                {
+                    "value": "m6i.2xlarge",
+                    "label": "m6i.2xlarge - General Purpose (Intel)"
+                },
+                {
+                    "value": "m7g.medium",
+                    "label": "m7g.medium - General Purpose (Graviton3)"
+                },
+                {
+                    "value": "m7g.large",
+                    "label": "m7g.large - General Purpose (Graviton3)"
+                },
+                {
+                    "value": "c5.large",
+                    "label": "c5.large - Compute Optimized"
+                },
+                {
+                    "value": "c5.xlarge",
+                    "label": "c5.xlarge - Compute Optimized"
+                },
+                {
+                    "value": "c5.2xlarge",
+                    "label": "c5.2xlarge - Compute Optimized"
+                },
+                {
+                    "value": "c5.4xlarge",
+                    "label": "c5.4xlarge - Compute Optimized"
+                },
+                {
+                    "value": "c5.9xlarge",
+                    "label": "c5.9xlarge - Compute Optimized"
+                },
+                {
+                    "value": "c5.18xlarge",
+                    "label": "c5.18xlarge - Compute Optimized"
+                },
+                {
+                    "value": "c6i.large",
+                    "label": "c6i.large - Compute Optimized (Intel)"
+                },
+                {
+                    "value": "c6i.xlarge",
+                    "label": "c6i.xlarge - Compute Optimized (Intel)"
+                },
+                {
+                    "value": "r5.large",
+                    "label": "r5.large - Memory Optimized"
+                },
+                {
+                    "value": "r5.xlarge",
+                    "label": "r5.xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.2xlarge",
+                    "label": "r5.2xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.4xlarge",
+                    "label": "r5.4xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.8xlarge",
+                    "label": "r5.8xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.12xlarge",
+                    "label": "r5.12xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.16xlarge",
+                    "label": "r5.16xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r5.24xlarge",
+                    "label": "r5.24xlarge - Memory Optimized"
+                },
+                {
+                    "value": "r6i.large",
+                    "label": "r6i.large - Memory Optimized (Intel)"
+                },
+                {
+                    "value": "r6i.xlarge",
+                    "label": "r6i.xlarge - Memory Optimized (Intel)"
+                },
+                {
+                    "value": "i3.large",
+                    "label": "i3.large - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.xlarge",
+                    "label": "i3.xlarge - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.2xlarge",
+                    "label": "i3.2xlarge - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.4xlarge",
+                    "label": "i3.4xlarge - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.8xlarge",
+                    "label": "i3.8xlarge - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.16xlarge",
+                    "label": "i3.16xlarge - Storage Optimized (NVMe SSD)"
+                },
+                {
+                    "value": "i3.metal",
+                    "label": "i3.metal - Storage Optimized (NVMe SSD)"
                 }
             ],
-            "pricingAttribute": "instanceFamily"
-        },
-        {
-            "id": "instance_size",
-            "label": "Instance Size",
-            "type": "enum",
-            "description": "EC2 instance size",
-            "required": true,
-            "default": "medium",
-            "options": [
-                {
-                    "value": "nano",
-                    "label": "nano"
-                },
-                {
-                    "value": "micro",
-                    "label": "micro"
-                },
-                {
-                    "value": "small",
-                    "label": "small"
-                },
-                {
-                    "value": "medium",
-                    "label": "medium"
-                },
-                {
-                    "value": "large",
-                    "label": "large"
-                },
-                {
-                    "value": "xlarge",
-                    "label": "xlarge"
-                },
-                {
-                    "value": "2xlarge",
-                    "label": "2xlarge"
-                },
-                {
-                    "value": "4xlarge",
-                    "label": "4xlarge"
-                },
-                {
-                    "value": "8xlarge",
-                    "label": "8xlarge"
-                },
-                {
-                    "value": "16xlarge",
-                    "label": "16xlarge"
-                }
-            ],
-            "pricingAttribute": "instanceSize"
+            "pricingAttribute": "instanceType"
         },
         {
             "id": "operating_system",
@@ -205,19 +306,19 @@
                     "options": [
                         {
                             "value": "gp3",
-                            "label": "gp3 - General Purpose SSD"
+                            "label": "gp3 - General Purpose SSD (Latest)"
                         },
                         {
                             "value": "gp2",
-                            "label": "gp2 - General Purpose SSD (Previous Gen)"
+                            "label": "gp2 - General Purpose SSD"
                         },
                         {
                             "value": "io2",
-                            "label": "io2 - Provisioned IOPS SSD"
+                            "label": "io2 - Provisioned IOPS SSD (Latest)"
                         },
                         {
                             "value": "io1",
-                            "label": "io1 - Provisioned IOPS SSD (Previous Gen)"
+                            "label": "io1 - Provisioned IOPS SSD"
                         },
                         {
                             "value": "st1",
@@ -226,6 +327,10 @@
                         {
                             "value": "sc1",
                             "label": "sc1 - Cold HDD"
+                        },
+                        {
+                            "value": "standard",
+                            "label": "standard - Magnetic (Previous Gen)"
                         }
                     ],
                     "pricingAttribute": "volumeType"
@@ -302,8 +407,7 @@
             "label": "Instance Configuration",
             "fields": [
                 "instance_name",
-                "instance_family",
-                "instance_size",
+                "instance_type",
                 "operating_system",
                 "tenancy"
             ],
@@ -386,10 +490,12 @@
     ],
     "pricing": [
         {
+            "id": "instance_hourly",
             "attribute": "instance_hourly",
             "source": "instance-pricing"
         },
         {
+            "id": "ebs_gp3_storage",
             "attribute": "ebs_gp3_storage",
             "source": "ebs-pricing",
             "filters": {
@@ -397,6 +503,7 @@
             }
         },
         {
+            "id": "ebs_gp3_iops",
             "attribute": "ebs_gp3_iops",
             "source": "ebs-pricing",
             "filters": {
@@ -405,6 +512,7 @@
             }
         },
         {
+            "id": "ebs_gp3_throughput",
             "attribute": "ebs_gp3_throughput",
             "source": "ebs-pricing",
             "filters": {
@@ -413,6 +521,7 @@
             }
         },
         {
+            "id": "ebs_gp2_storage",
             "attribute": "ebs_gp2_storage",
             "source": "ebs-pricing",
             "filters": {
@@ -420,6 +529,7 @@
             }
         },
         {
+            "id": "ebs_io2_storage",
             "attribute": "ebs_io2_storage",
             "source": "ebs-pricing",
             "filters": {
@@ -427,6 +537,7 @@
             }
         },
         {
+            "id": "ebs_io2_iops",
             "attribute": "ebs_io2_iops",
             "source": "ebs-pricing",
             "filters": {
@@ -435,6 +546,7 @@
             }
         },
         {
+            "id": "ebs_snapshot",
             "attribute": "ebs_snapshot",
             "source": "ebs-pricing",
             "filters": {
@@ -442,10 +554,12 @@
             }
         },
         {
+            "id": "elastic_ip",
             "attribute": "elastic_ip",
             "source": "elastic-ip-pricing"
         },
         {
+            "id": "detailed_monitoring",
             "attribute": "detailed_monitoring",
             "source": "cloudwatch-pricing",
             "filters": {
@@ -453,6 +567,7 @@
             }
         },
         {
+            "id": "data_transfer_out",
             "attribute": "data_transfer_out",
             "source": "data-transfer",
             "filters": {
