@@ -1,0 +1,548 @@
+{
+    "service": "vpc",
+    "version": "1.0.0",
+    "metadata": {
+        "displayName": "Amazon VPC",
+        "description": "Virtual Private Cloud networking configuration and cost estimation",
+        "category": "Networking & Content Delivery",
+        "icon": "vpc",
+        "documentation": "https://aws.amazon.com/vpc/pricing/"
+    },
+    "fields": [
+        {
+            "id": "vpc_name",
+            "label": "VPC Name",
+            "type": "string",
+            "description": "Identifier for this VPC configuration",
+            "required": true,
+            "default": "my-vpc"
+        },
+        {
+            "id": "cidr_block",
+            "label": "IPv4 CIDR Block",
+            "type": "string",
+            "description": "The IPv4 network range for the VPC in CIDR notation",
+            "required": true,
+            "default": "10.0.0.0/16",
+            "validation": {
+                "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$"
+            }
+        },
+        {
+            "id": "availability_zones",
+            "label": "Number of Availability Zones",
+            "type": "number",
+            "description": "Number of AZs to span",
+            "required": true,
+            "default": 2,
+            "validation": {
+                "min": 1,
+                "max": 6
+            }
+        },
+        {
+            "id": "public_subnets",
+            "label": "Public Subnets per AZ",
+            "type": "number",
+            "description": "Number of public subnets in each AZ",
+            "required": true,
+            "default": 1,
+            "validation": {
+                "min": 0,
+                "max": 4
+            }
+        },
+        {
+            "id": "private_subnets",
+            "label": "Private Subnets per AZ",
+            "type": "number",
+            "description": "Number of private subnets in each AZ",
+            "required": true,
+            "default": 1,
+            "validation": {
+                "min": 0,
+                "max": 4
+            }
+        },
+        {
+            "id": "database_subnets",
+            "label": "Database Subnets per AZ",
+            "type": "number",
+            "description": "Number of database subnets in each AZ",
+            "required": false,
+            "default": 0,
+            "validation": {
+                "min": 0,
+                "max": 4
+            }
+        },
+        {
+            "id": "enable_internet_gateway",
+            "label": "Internet Gateway",
+            "type": "boolean",
+            "description": "Enable Internet Gateway for public internet access",
+            "required": false,
+            "default": true,
+            "visibleWhen": {
+                "operator": "gt",
+                "field": "public_subnets",
+                "value": 0
+            }
+        },
+        {
+            "id": "nat_gateway_mode",
+            "label": "NAT Gateway Configuration",
+            "type": "enum",
+            "description": "NAT Gateway deployment strategy",
+            "required": false,
+            "default": "single",
+            "options": [
+                {
+                    "value": "none",
+                    "label": "None",
+                    "description": "No NAT Gateway"
+                },
+                {
+                    "value": "single",
+                    "label": "Single NAT Gateway",
+                    "description": "One NAT Gateway in a single AZ (cost-effective)"
+                },
+                {
+                    "value": "per_az",
+                    "label": "NAT Gateway per AZ",
+                    "description": "One NAT Gateway per AZ (high availability)"
+                }
+            ],
+            "visibleWhen": {
+                "operator": "gt",
+                "field": "private_subnets",
+                "value": 0
+            }
+        },
+        {
+            "id": "vpc_endpoints",
+            "label": "VPC Endpoints",
+            "type": "multiselect",
+            "description": "AWS service endpoints to create",
+            "required": false,
+            "default": [],
+            "options": [
+                {
+                    "value": "s3",
+                    "label": "S3 (Gateway)",
+                    "description": "Free gateway endpoint for S3"
+                },
+                {
+                    "value": "dynamodb",
+                    "label": "DynamoDB (Gateway)",
+                    "description": "Free gateway endpoint for DynamoDB"
+                },
+                {
+                    "value": "ec2",
+                    "label": "EC2 (Interface)",
+                    "description": "Interface endpoint for EC2 API"
+                },
+                {
+                    "value": "ecr_api",
+                    "label": "ECR API (Interface)",
+                    "description": "Interface endpoint for ECR API"
+                },
+                {
+                    "value": "ecr_dkr",
+                    "label": "ECR Docker (Interface)",
+                    "description": "Interface endpoint for ECR Docker"
+                },
+                {
+                    "value": "secretsmanager",
+                    "label": "Secrets Manager (Interface)",
+                    "description": "Interface endpoint for Secrets Manager"
+                }
+            ]
+        },
+        {
+            "id": "enable_vpc_flow_logs",
+            "label": "VPC Flow Logs",
+            "type": "boolean",
+            "description": "Enable VPC Flow Logs to CloudWatch",
+            "required": false,
+            "default": false
+        },
+        {
+            "id": "flow_logs_retention_days",
+            "label": "Flow Logs Retention (days)",
+            "type": "enum",
+            "description": "CloudWatch Logs retention period",
+            "required": false,
+            "default": 7,
+            "options": [
+                {
+                    "value": 1,
+                    "label": "1 day"
+                },
+                {
+                    "value": 7,
+                    "label": "7 days"
+                },
+                {
+                    "value": 30,
+                    "label": "30 days"
+                },
+                {
+                    "value": 90,
+                    "label": "90 days"
+                },
+                {
+                    "value": 365,
+                    "label": "1 year"
+                }
+            ],
+            "visibleWhen": {
+                "operator": "eq",
+                "field": "enable_vpc_flow_logs",
+                "value": true
+            }
+        },
+        {
+            "id": "enable_transit_gateway",
+            "label": "Transit Gateway Attachment",
+            "type": "boolean",
+            "description": "Attach VPC to Transit Gateway",
+            "required": false,
+            "default": false
+        },
+        {
+            "id": "vpc_peering_connections",
+            "label": "VPC Peering Connections",
+            "type": "number",
+            "description": "Number of VPC peering connections",
+            "required": false,
+            "default": 0,
+            "validation": {
+                "min": 0,
+                "max": 125
+            }
+        }
+    ],
+    "groups": [
+        {
+            "id": "basic",
+            "label": "Basic Configuration",
+            "fields": [
+                "vpc_name",
+                "cidr_block",
+                "availability_zones"
+            ],
+            "defaultExpanded": true
+        },
+        {
+            "id": "subnets",
+            "label": "Subnet Configuration",
+            "fields": [
+                "public_subnets",
+                "private_subnets",
+                "database_subnets"
+            ],
+            "defaultExpanded": true
+        },
+        {
+            "id": "connectivity",
+            "label": "Internet Connectivity",
+            "fields": [
+                "enable_internet_gateway",
+                "nat_gateway_mode"
+            ],
+            "defaultExpanded": true
+        },
+        {
+            "id": "endpoints",
+            "label": "VPC Endpoints",
+            "fields": [
+                "vpc_endpoints"
+            ],
+            "defaultExpanded": false
+        },
+        {
+            "id": "advanced",
+            "label": "Advanced Options",
+            "fields": [
+                "enable_vpc_flow_logs",
+                "flow_logs_retention_days",
+                "enable_transit_gateway",
+                "vpc_peering_connections"
+            ],
+            "defaultExpanded": false
+        }
+    ],
+    "usage": [
+        {
+            "id": "nat_data_processed_gb",
+            "label": "NAT Gateway Data Processed",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 10000,
+            "default": 100,
+            "step": 10,
+            "presets": {
+                "low": 50,
+                "medium": 500,
+                "high": 2000
+            },
+            "description": "Data processed through NAT Gateway per month"
+        },
+        {
+            "id": "interface_endpoint_hours",
+            "label": "Interface Endpoint Hours",
+            "unit": "hours/month",
+            "type": "calculated",
+            "default": 730,
+            "formula": "HOURS_PER_MONTH",
+            "description": "Hours per month interface endpoints are active"
+        },
+        {
+            "id": "data_transfer_out_gb",
+            "label": "Data Transfer Out to Internet",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 10000,
+            "default": 100,
+            "step": 10,
+            "presets": {
+                "low": 50,
+                "medium": 500,
+                "high": 2000
+            },
+            "description": "Data transferred out to internet per month"
+        },
+        {
+            "id": "cross_az_data_transfer_gb",
+            "label": "Cross-AZ Data Transfer",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 5000,
+            "default": 50,
+            "step": 10,
+            "presets": {
+                "low": 20,
+                "medium": 200,
+                "high": 1000
+            },
+            "description": "Data transferred between availability zones"
+        },
+        {
+            "id": "flow_logs_gb",
+            "label": "Flow Logs Volume",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 1000,
+            "default": 10,
+            "step": 1,
+            "presets": {
+                "low": 5,
+                "medium": 50,
+                "high": 200
+            },
+            "description": "Volume of flow logs generated per month"
+        },
+        {
+            "id": "transit_gateway_data_gb",
+            "label": "Transit Gateway Data Processed",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 5000,
+            "default": 100,
+            "step": 10,
+            "presets": {
+                "low": 50,
+                "medium": 500,
+                "high": 2000
+            },
+            "description": "Data processed through Transit Gateway"
+        },
+        {
+            "id": "peering_data_gb",
+            "label": "VPC Peering Data Transfer",
+            "unit": "GB/month",
+            "type": "slider",
+            "min": 0,
+            "max": 5000,
+            "default": 50,
+            "step": 10,
+            "presets": {
+                "low": 20,
+                "medium": 200,
+                "high": 1000
+            },
+            "description": "Data transferred via VPC peering"
+        }
+    ],
+    "pricing": [
+        {
+            "attribute": "nat_gateway_hourly",
+            "source": "nat-gateway",
+            "filters": {
+                "usageType": "NatGateway-Hours"
+            }
+        },
+        {
+            "attribute": "nat_gateway_data",
+            "source": "nat-gateway",
+            "filters": {
+                "usageType": "NatGateway-Bytes"
+            }
+        },
+        {
+            "attribute": "interface_endpoint_hourly",
+            "source": "vpc-endpoints",
+            "filters": {
+                "endpointType": "Interface"
+            }
+        },
+        {
+            "attribute": "data_transfer_out",
+            "source": "data-transfer",
+            "filters": {
+                "transferType": "out-to-internet"
+            }
+        },
+        {
+            "attribute": "cross_az_transfer",
+            "source": "data-transfer",
+            "filters": {
+                "transferType": "cross-az"
+            }
+        },
+        {
+            "attribute": "flow_logs_ingestion",
+            "source": "cloudwatch-logs",
+            "filters": {
+                "usageType": "DataIngestion"
+            }
+        },
+        {
+            "attribute": "flow_logs_storage",
+            "source": "cloudwatch-logs",
+            "filters": {
+                "usageType": "TimedStorage"
+            }
+        },
+        {
+            "attribute": "transit_gateway_attachment",
+            "source": "transit-gateway",
+            "filters": {
+                "usageType": "TransitGatewayVPC-Hours"
+            }
+        },
+        {
+            "attribute": "transit_gateway_data",
+            "source": "transit-gateway",
+            "filters": {
+                "usageType": "TransitGateway-Bytes"
+            }
+        }
+    ],
+    "formulas": [
+        {
+            "id": "nat_gateway_hours",
+            "label": "NAT Gateway - Hourly Charges",
+            "formula": "nat_gateway_hourly * HOURS_PER_MONTH * (nat_gateway_mode === 'single' ? 1 : nat_gateway_mode === 'per_az' ? availability_zones : 0)",
+            "unit": "USD/month",
+            "description": "NAT Gateway hourly charges based on deployment mode"
+        },
+        {
+            "id": "nat_gateway_data_processing",
+            "label": "NAT Gateway - Data Processing",
+            "formula": "nat_gateway_data * nat_data_processed_gb",
+            "unit": "USD/month",
+            "description": "NAT Gateway data processing charges"
+        },
+        {
+            "id": "interface_endpoints",
+            "label": "Interface VPC Endpoints",
+            "formula": "interface_endpoint_hourly * interface_endpoint_hours * vpc_endpoints.filter(e => !['s3', 'dynamodb'].includes(e)).length * availability_zones",
+            "unit": "USD/month",
+            "description": "Interface endpoint charges (per AZ)"
+        },
+        {
+            "id": "data_transfer_internet",
+            "label": "Data Transfer Out to Internet",
+            "formula": "data_transfer_out * data_transfer_out_gb",
+            "unit": "USD/month",
+            "description": "Data transfer out to internet charges"
+        },
+        {
+            "id": "cross_az_transfer",
+            "label": "Cross-AZ Data Transfer",
+            "formula": "cross_az_transfer * cross_az_data_transfer_gb",
+            "unit": "USD/month",
+            "description": "Data transfer between availability zones"
+        },
+        {
+            "id": "flow_logs",
+            "label": "VPC Flow Logs",
+            "formula": "enable_vpc_flow_logs ? (flow_logs_ingestion * flow_logs_gb + flow_logs_storage * flow_logs_gb * flow_logs_retention_days / 30) : 0",
+            "unit": "USD/month",
+            "description": "CloudWatch Logs ingestion and storage for flow logs"
+        },
+        {
+            "id": "transit_gateway",
+            "label": "Transit Gateway Attachment",
+            "formula": "enable_transit_gateway ? (transit_gateway_attachment * HOURS_PER_MONTH + transit_gateway_data * transit_gateway_data_gb) : 0",
+            "unit": "USD/month",
+            "description": "Transit Gateway attachment and data processing"
+        },
+        {
+            "id": "vpc_peering",
+            "label": "VPC Peering Data Transfer",
+            "formula": "cross_az_transfer * peering_data_gb * vpc_peering_connections",
+            "unit": "USD/month",
+            "description": "Data transfer via VPC peering connections"
+        }
+    ],
+    "validation": {
+        "rules": [
+            {
+                "condition": {
+                    "operator": "and",
+                    "expressions": [
+                        {
+                            "operator": "eq",
+                            "field": "public_subnets",
+                            "value": 0
+                        },
+                        {
+                            "operator": "eq",
+                            "field": "enable_internet_gateway",
+                            "value": true
+                        }
+                    ]
+                },
+                "message": "Internet Gateway requires at least one public subnet",
+                "severity": "warning"
+            },
+            {
+                "condition": {
+                    "operator": "and",
+                    "expressions": [
+                        {
+                            "operator": "eq",
+                            "field": "private_subnets",
+                            "value": 0
+                        },
+                        {
+                            "operator": "ne",
+                            "field": "nat_gateway_mode",
+                            "value": "none"
+                        }
+                    ]
+                },
+                "message": "NAT Gateway requires at least one private subnet",
+                "severity": "warning"
+            }
+        ]
+    }
+}
