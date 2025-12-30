@@ -1,7 +1,7 @@
 import { database } from './database';
 import { logger } from './logger';
 import { config } from './config';
-import { ParsedPrice, PricingDimension } from './types';
+import { ParsedPrice } from './types';
 
 export class Normalizer {
     /**

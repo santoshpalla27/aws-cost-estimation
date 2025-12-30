@@ -30,6 +30,25 @@ export interface PricingDimension {
     attributes: Record<string, any>;
 }
 
+export interface ParsedPrice {
+    sku: string;
+    service: string;
+    regionCode: string;
+    productFamily: string;
+    attributes: Record<string, any>;
+    usageType: string;
+    operation: string | null;
+    unit: string;
+    pricePerUnit: number;
+    beginRange: number;
+    endRange: number | null;
+    termType: 'OnDemand' | 'Reserved';
+    leaseContractLength: string | null;
+    purchaseOption: string | null;
+    offeringClass: string | null;
+    effectiveDate: Date;
+}
+
 export interface AttributeMapping {
     mappingType: string;
     inputCode: string;

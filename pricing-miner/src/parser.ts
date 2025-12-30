@@ -1,28 +1,12 @@
 import * as fs from 'fs';
+// @ts-ignore - No type definitions available
 import { Chain } from 'stream-chain';
+// @ts-ignore - No type definitions available
 import { parser } from 'stream-json';
+// @ts-ignore - No type definitions available
 import { streamObject } from 'stream-json/streamers/StreamObject';
 import { logger } from './logger';
-import { AWSPricingCatalog, AWSProduct, AWSTerm, AWSPriceDimension } from './types';
-
-export interface ParsedPrice {
-    sku: string;
-    service: string;
-    regionCode: string;
-    productFamily: string;
-    attributes: Record<string, any>;
-    usageType: string;
-    operation: string | null;
-    unit: string;
-    pricePerUnit: number;
-    beginRange: number;
-    endRange: number | null;
-    termType: 'OnDemand' | 'Reserved';
-    leaseContractLength: string | null;
-    purchaseOption: string | null;
-    offeringClass: string | null;
-    effectiveDate: Date;
-}
+import { ParsedPrice, AWSProduct, AWSTerm, AWSPriceDimension } from './types';
 
 export class Parser {
     /**
@@ -33,7 +17,6 @@ export class Parser {
         logger.info('Starting streaming parse', { filePath, service, regionCode });
 
         let products: Record<string, AWSProduct> = {};
-        let currentSection: 'products' | 'terms' | null = null;
         let productCount = 0;
         let priceCount = 0;
 
