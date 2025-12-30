@@ -1,0 +1,38 @@
+{
+    "name": "ec2-03-missing-region",
+    "description": "EC2 without region specified - mocker should inject us-east-1 with MEDIUM confidence",
+    "terraform_plan_file": "ec2-03-no-region.json",
+    "evaluation_mode": "CONSERVATIVE",
+    "catalog_version": "v2025-12-30",
+    "expected_output": {
+        "id": "",
+        "input_hash": "",
+        "catalog_version": "v2025-12-30",
+        "resources": [
+            {
+                "address": "aws_instance.web",
+                "type": "aws_instance",
+                "region": "us-east-1",
+                "is_mocked": true,
+                "mock_metadata": [
+                    {
+                        "field": "region",
+                        "value": "us-east-1",
+                        "reason": "Region not specified in Terraform - defaulting to us-east-1",
+                        "confidence": "MEDIUM"
+                    }
+                ]
+            }
+        ],
+        "cost_items": [],
+        "service_breakdown": {
+            "AmazonEC2": 7.59
+        },
+        "total_cost": 7.59,
+        "currency": "USD",
+        "confidence": "MEDIUM",
+        "assumptions": [
+            "Region not specified in Terraform - defaulting to us-east-1"
+        ]
+    }
+}

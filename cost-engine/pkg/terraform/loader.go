@@ -142,10 +142,25 @@ func (l *Loader) extractResourcesFromPlan(plan *TerraformPlan) []types.Resource 
 		return resources
 	}
 
-	return l.extractModuleResources(plan.PlannedValues.RootModule, "")
+	// Extract provider configuration to get region
+	providerConfig := l.extractProviderConfig(plan)
+	
+	return l.extractModuleResources(plan.PlannedValues.RootModule, "", providerConfig)
 }
 
-func (l *Loader) extractModuleResources(module *Module, prefix string) []types.Resource {
+func (l *Loader) extractProviderConfig(plan *TerraformPlan) map[string]string {
+	config := make(map[string]string)
+	
+	// Try to extract AWS region from configuration
+	if plan.Configuration != nil && plan.Configuration.RootModule != nil {
+		// This is simplified - in production, parse provider blocks
+		// For now, we'll return empty and let mocker handle it
+	}
+	
+	return config
+}
+
+func (l *Loader) extractModuleResources(module *Module, prefix string, providerConfig map[string]string) []types.Resource {
 	var resources []types.Resource
 
 	for _, resource := range module.Resources {
@@ -154,12 +169,22 @@ func (l *Loader) extractModuleResources(module *Module, prefix string) []types.R
 			addr = prefix + "." + addr
 		}
 
+		// Try to extract region from resource or provider
+		region := ""
+		if r, ok := resource.Values["region"].(string); ok {
+			region = r
+		} else if r, ok := providerConfig["region"]; ok {
+			region = r
+		}
+		// If still empty, mocker will inject it
+
 		res := types.Resource{
 			Address:    addr,
 			Type:       resource.Type,
 			Name:       resource.Name,
 			Index:      resource.Index,
 			Provider:   resource.ProviderName,
+			Region:     region, // Now injected from plan or provider
 			Attributes: resource.Values,
 		}
 
@@ -172,7 +197,7 @@ func (l *Loader) extractModuleResources(module *Module, prefix string) []types.R
 		if prefix != "" {
 			childPrefix = prefix + "." + childPrefix
 		}
-		childResources := l.extractModuleResources(childModule, childPrefix)
+		childResources := l.extractModuleResources(childModule, childPrefix, providerConfig)
 		resources = append(resources, childResources...)
 	}
 

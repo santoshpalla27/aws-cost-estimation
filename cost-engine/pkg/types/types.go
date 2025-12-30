@@ -7,6 +7,7 @@ type Resource struct {
 	Name         string                 // e.g., web
 	Index        interface{}            // nil, int for count, string for for_each
 	Provider     string                 // e.g., aws
+	Region       string                 // REQUIRED: e.g., us-east-1 (injected by loader/mocker)
 	Attributes   map[string]interface{} // Resource attributes
 	Dependencies []string               // Resource addresses this depends on
 	IsMocked     bool                   // True if contains mocked values

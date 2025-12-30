@@ -1,0 +1,58 @@
+{
+    "name": "ec2-01-simple-explicit",
+    "description": "Simple EC2 instance with explicit values - should produce HIGH confidence estimate",
+    "terraform_plan_file": "ec2-01-simple.json",
+    "evaluation_mode": "CONSERVATIVE",
+    "catalog_version": "v2025-12-30",
+    "expected_output": {
+        "id": "",
+        "input_hash": "",
+        "catalog_version": "v2025-12-30",
+        "resources": [
+            {
+                "address": "aws_instance.web",
+                "type": "aws_instance",
+                "name": "web",
+                "provider": "registry.terraform.io/hashicorp/aws",
+                "region": "us-east-1",
+                "is_mocked": false,
+                "mock_metadata": []
+            }
+        ],
+        "cost_items": [
+            {
+                "resource_address": "aws_instance.web",
+                "service": "AmazonEC2",
+                "region": "us-east-1",
+                "usage_type": "BoxUsage:t3.micro",
+                "quantity": 730,
+                "unit": "Hrs",
+                "price_per_unit": 0.0104,
+                "total_cost": 7.59,
+                "sku": "MOCKSKU001",
+                "confidence": "HIGH",
+                "match_type": "EXACT"
+            },
+            {
+                "resource_address": "aws_instance.web",
+                "service": "AmazonEC2",
+                "region": "us-east-1",
+                "usage_type": "EBS:VolumeUsage.gp3",
+                "quantity": 20,
+                "unit": "GB-Mo",
+                "price_per_unit": 0.08,
+                "total_cost": 1.60,
+                "sku": "MOCKSKU002",
+                "confidence": "HIGH",
+                "match_type": "EXACT"
+            }
+        ],
+        "service_breakdown": {
+            "AmazonEC2": 9.19
+        },
+        "total_cost": 9.19,
+        "currency": "USD",
+        "confidence": "HIGH",
+        "assumptions": []
+    }
+}

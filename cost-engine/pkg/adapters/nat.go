@@ -17,7 +17,12 @@ func (a *NATAdapter) Supports(resourceType string) bool {
 func (a *NATAdapter) Extract(resource *types.Resource) ([]types.UsageVector, error) {
 	var vectors []types.UsageVector
 
-	region := GetStringAttr(resource, "region", "us-east-1")
+	// Region - MUST be injected by terraform loader or mocker
+	// NO DEFAULTS ALLOWED in adapters
+	if resource.Region == "" {
+		return nil, fmt.Errorf("region is required for %s but was empty - this is a loader/mocker bug", resource.Address)
+	}
+	region := resource.Region
 
 	// NAT Gateway has two components:
 	// 1. Hourly charge

@@ -22,13 +22,18 @@ func (a *LambdaAdapter) Extract(resource *types.Resource) ([]types.UsageVector, 
 	// Memory allocation (MB)
 	memorySize := float64(GetIntAttr(resource, "memory_size", 128))
 
-	// Region
-	region := GetStringAttr(resource, "region", "us-east-1")
+	// Region - MUST be injected by terraform loader or mocker
+	// NO DEFAULTS ALLOWED in adapters
+	if resource.Region == "" {
+		return nil, fmt.Errorf("region is required for %s but was empty - this is a loader/mocker bug", resource.Address)
+	}
+	region := resource.Region
 
 	// Determine confidence
 	confidence := types.ConfidenceHigh
 	if resource.IsMocked {
-		confidence := types.ConfidenceMedium
+		// FIX: Must mutate, not shadow
+		confidence = types.ConfidenceMedium
 	}
 
 	// For Lambda, we need usage profiles to estimate:

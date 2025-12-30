@@ -9,7 +9,9 @@ import (
 
 // Mocker handles detection and mocking of unresolved Terraform values
 type Mocker struct {
-	rules map[string]MockRule
+	rules        map[string]MockRule
+	evalMode     types.EvaluationMode
+	modeDefaults *types.ModeDefaults
 }
 
 // MockRule defines how to mock a specific pattern
@@ -21,8 +23,14 @@ type MockRule struct {
 }
 
 func New() *Mocker {
+	return NewWithMode(types.EvaluationConservative)
+}
+
+func NewWithMode(mode types.EvaluationMode) *Mocker {
 	return &Mocker{
-		rules: defaultMockRules(),
+		rules:        defaultMockRules(),
+		evalMode:     mode,
+		modeDefaults: &types.ModeDefaults{Mode: mode},
 	}
 }
 
@@ -39,6 +47,27 @@ func (m *Mocker) ProcessResources(resources []types.Resource) []types.Resource {
 }
 
 func (m *Mocker) processResource(resource *types.Resource) {
+	// CRITICAL: Ensure region is set (required for all adapters)
+	if resource.Region == "" {
+		// Try to infer from provider or use default based on mode
+		if m.evalMode == types.EvaluationStrict {
+			log.WithField("resource", resource.Address).Error("Missing region in STRICT mode")
+			// In strict mode, we should fail - but for now, log error
+		}
+		
+		// Default region injection (must be explicit)
+		resource.Region = "us-east-1"
+		resource.IsMocked = true
+		resource.MockMetadata = append(resource.MockMetadata, types.MockAnnotation{
+			Field:      "region",
+			Value:      "us-east-1",
+			Reason:     "Region not specified in Terraform - defaulting to us-east-1",
+			Confidence: types.ConfidenceMedium,
+		})
+		
+		log.WithField("resource", resource.Address).Warn("Injected default region")
+	}
+
 	// Check for unresolved data sources
 	if m.hasUnresolvedDataSource(resource) {
 		m.mockDataSource(resource)

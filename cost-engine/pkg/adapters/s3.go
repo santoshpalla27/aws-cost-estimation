@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"fmt"
+	
 	"github.com/aws-cost-estimation/cost-engine/pkg/types"
 )
 
@@ -19,7 +21,12 @@ func (a *S3Adapter) Extract(resource *types.Resource) ([]types.UsageVector, erro
 	// Without usage profile, we CANNOT estimate accurately
 	// We must explicitly state this
 
-	region := GetStringAttr(resource, "region", "us-east-1")
+	// Region - MUST be injected by terraform loader or mocker
+	// NO DEFAULTS ALLOWED in adapters
+	if resource.Region == "" {
+		return nil, fmt.Errorf("region is required for %s but was empty - this is a loader/mocker bug", resource.Address)
+	}
+	region := resource.Region
 
 	// Return empty vectors with explicit note
 	// In production, this would integrate with usage modeling system
