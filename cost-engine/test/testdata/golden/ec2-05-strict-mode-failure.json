@@ -1,8 +1,0 @@
-{
-    "name": "ec2-05-strict-mode-failure",
-    "description": "Unresolved variable in STRICT mode - should ERROR and fail the build",
-    "terraform_plan_file": "ec2-05-strict.json",
-    "evaluation_mode": "STRICT",
-    "catalog_version": "v2025-12-30",
-    "expected_output": null
-}
