@@ -1,393 +1,246 @@
-# Terraform-Aware AWS Cost Estimation Platform
+# AWS Cost Estimation Platform
 
-> **Production-grade cost estimation with explainability, auditability, and zero silent defaults.**
+Production-grade Terraform cost estimation with explainability and auditability.
 
-This is NOT a demo, calculator, or UI toy. This is an enterprise-ready platform for accurate, deterministic AWS cost estimation from Terraform configurations.
+## Architecture
 
-## Architecture Overview
-
-The system uses a **two-brain architecture** for separation of concerns:
-
-### Brain 1: Pricing Miner (Node.js - Offline)
-- Downloads AWS pricing catalogs from official API
-- Streams multi-GB JSON files without memory overflow
-- Normalizes pricing into queryable PostgreSQL warehouse
-- Versions all catalog ingestions for determinism
-- **Never touches Terraform logic**
-
-### Brain 2: Cost Engine (Go - Real-time)
-- Interprets Terraform configurations and plans
-- Applies smart mocking with explicit confidence tracking
-- Extracts billable usage vectors per service
-- Matches usage to pricing data
-- Produces explainable, auditable estimates
-- **Never contains hardcoded pricing**
-
-**Communication:** Database only. No shared business logic.
-
----
-
-## Non-Negotiable Engineering Principles
-
-1. ✅ **No silent defaults** - Every assumption is logged and annotated
-2. ✅ **No hidden mocks** - All mocks have confidence levels and reasons
-3. ✅ **No hardcoded pricing** - All prices from versioned database
-4. ✅ **No mixed responsibilities** - Strict layer separation
-5. ✅ **Determinism** - Same input → Same output, always
-6. ✅ **Explainability** - Every dollar traceable to source SKU
-7. ✅ **Never underestimate silently** - Missing data causes explicit LOW confidence, not zero
-
----
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Frontend  │────▶│ Cost Engine  │────▶│  PostgreSQL │
+│ (React+Nginx)│     │     (Go)     │     │  (Pricing)  │
+└─────────────┘     └──────────────┘     └─────────────┘
+       │                    │
+       └────── API ─────────┘
+```
 
 ## Quick Start
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for pricing-miner development)
-- Go 1.21+ (for cost-engine development)
-
-### 1. Start Infrastructure
+### Option 1: Full Stack (Docker Compose)
 
 ```bash
-# Start PostgreSQL
-docker-compose up -d postgres
+# Start all services
+docker-compose up --build
 
-# Wait for database to be ready
-docker-compose logs -f postgres
+# Access:
+# - Frontend: http://localhost:3000
+# - Backend API: http://localhost:8080
+# - Database: localhost:5432
 ```
 
-### 2. Ingest AWS Pricing Data
+### Option 2: Development Mode
 
-```bash
-# Enter pricing-miner
-cd pricing-miner
-
-# Install dependencies
-npm install
-
-# Build TypeScript
-npm run build
-
-# Ingest AWS Lambda pricing for us-east-1
-npm run ingest lambda us-east-1
-
-# Check status
-npm run status
-
-# Verify data integrity
-npm run verify <version-id-from-status>
-```
-
-### 3. Run Cost Estimation
-
-```bash
-# Enter cost-engine
-cd ../cost-engine
-
-# Download Go dependencies
-go mod download
-
-# Estimate from Terraform plan JSON (recommended)
-terraform init
-terraform plan -out=plan.tfplan
-terraform show -json plan.tfplan > plan.json
-go run cmd/main.go estimate --plan plan.json
-
-# Or estimate from Terraform directory (experimental)
-go run cmd/main.go estimate --dir ./examples/simple
-```
-
----
-
-## Usage Examples
-
-### Example 1: Simple EC2 Instance
-
-**Terraform:**
-```hcl
-resource "aws_instance" "web" {
-  ami           = "ami-12345678"
-  instance_type = "t3.micro"
-  region        = "us-east-1"
-}
-```
-
-**Estimation Output:**
-```
-╔════════════════════════════════════════════════════════════╗
-║           AWS COST ESTIMATION REPORT                       ║
-╚════════════════════════════════════════════════════════════╝
-
-Estimate ID: 550e8400-e29b-41d4-a716-446655440000
-Confidence:  ✓ HIGH
-
-┌─────────────────────────────────────────────────────────────┐
-│ COST BREAKDOWN BY SERVICE                                   │
-└─────────────────────────────────────────────────────────────┘
-  AmazonEC2                          $7.30/mo
-
-┌─────────────────────────────────────────────────────────────┐
-│ DETAILED COST ITEMS                                         │
-└─────────────────────────────────────────────────────────────┘
-
-  Resource: aws_instance.web
-  AmazonEC2: 730.00 Hrs × $0.010000/Hrs = $7.30/mo
-  Confidence: ✓ HIGH  Match: EXACT
-
-╔════════════════════════════════════════════════════════════╗
-║  TOTAL ESTIMATED COST:  $7.30      USD/month            ║
-╚════════════════════════════════════════════════════════════╝
-```
-
-### Example 2: Lambda with Unknown Usage
-
-**Terraform:**
-```hcl
-resource "aws_lambda_function" "api" {
-  function_name = "my-api"
-  memory_size   = 512
-  runtime       = "python3.11"
-}
-```
-
-**Estimation Output:**
-```
-  Resource: aws_lambda_function.api
-  AWSLambda: 512.00 GB-s × $0.000017/GB-s = $8.70/mo
-  Confidence: ⚠ LOW  Match: EXACT
-
-┌─────────────────────────────────────────────────────────────┐
-│ ASSUMPTIONS                                                 │
-└─────────────────────────────────────────────────────────────┘
-  ⚠  aws_lambda_function.api: Conservative default usage - override with usage profile
-  ⚠  Assumed 1,000 requests/month with 1s average duration
-```
-
-**Key Point:** Cost is calculated, but flagged as LOW confidence because usage is assumed.
-
----
-
-## Confidence Levels
-
-| Symbol | Level  | Meaning                                         |
-|--------|--------|-------------------------------------------------|
-| ✓      | HIGH   | Exact Terraform values, exact pricing match     |
-| ●      | MEDIUM | Some mocked/inferred values, fallback pricing   |
-| ⚠      | LOW    | Usage assumptions, heuristic matching           |
-
-**Overall estimate confidence = lowest individual confidence**
-
----
-
-## Supported AWS Services
-
-### Fully Implemented
-- ✅ **EC2**: Instance hours, EBS volumes, IOPS
-- ✅ **Lambda**: GB-seconds, requests, provisioned concurrency
-- ✅ **RDS**: Instance hours, storage, IOPS, backups
-- ✅ **NAT Gateway**: Hours, data processed
-- ⚠️  **S3**: Requires usage profile (storage, requests, transfer)
-
-### Planned
-- 🔜 DynamoDB
-- 🔜 CloudFront
-- 🔜 API Gateway
-- 🔜 ECS/EKS
-- 🔜 ALB/NLB
-
----
-
-## Cost Diff Example
-
-```bash
-# Compare before and after
-go run cmd/main.go diff \
-  --before-plan before.json \
-  --after-plan after.json
-```
-
-**Output:**
-```
-╔════════════════════════════════════════════════════════════╗
-║           COST DIFFERENCE REPORT                           ║
-╚════════════════════════════════════════════════════════════╝
-
-Before:  $50.00/mo
-After:   $75.00/mo
-Delta:   ↑ $25.00/mo (50.0%)
-```
-
----
-
-## Database Schema
-
-### `pricing_dimensions`
-Normalized AWS pricing data with:
-- Deterministic SKU constraints (no duplicates per version)
-- Tiered pricing support (begin_range, end_range)
-- JSONB attributes for future-proofing
-- Foreign key to catalog_version
-
-### `pricing_catalog_versions`
-Audit trail for all ingestions:
-- SHA256 file hash for idempotency
-- Publication and ingestion timestamps
-- Status tracking (PENDING → IN_PROGRESS → COMPLETED/FAILED)
-
-### `attribute_mappings`
-Vocabulary translation:
-- Region codes ↔ Region names
-- Operating systems
-- Tenancy types
-- License models
-
----
-
-## Advanced Features
-
-### 1. Deterministic Output
-```bash
-# Same input ALWAYS produces same output
-INPUT_HASH=$(sha256sum terraform/)
-ESTIMATE_1=$(go run cmd/main.go estimate --dir terraform/ --format json | jq .total_cost)
-ESTIMATE_2=$(go run cmd/main.go estimate --dir terraform/ --format json | jq .total_cost)
-
-# Assert equality
-[ "$ESTIMATE_1" = "$ESTIMATE_2" ] && echo "✓ Deterministic"
-```
-
-### 2. Pricing Catalog Versioning
-Every estimate tracks which pricing catalog version was used, enabling reproducibility.
-
-### 3. Mock Annotations
-All mocked values include:
-- Field that was mocked
-- Mocked value
-- Reason for mocking
-- Confidence level
-
-### 4. CI/CD Integration (Planned - Stage 8)
-```yaml
-# .github/workflows/cost-check.yml
-- name: Estimate Terraform Costs
-  run: |
-    cost-engine estimate --plan plan.json --format json > estimate.json
-    
-- name: Check Budget Policy
-  run: |
-    cost-engine policy --estimate estimate.json --policy policy.yml
-```
-
----
-
-## Development
-
-### Pricing Miner (Node.js)
-
-```bash
-cd pricing-miner
-
-# Development mode
-npm run dev ingest lambda us-east-1
-
-# Run tests
-npm test
-
-# Lint
-npm run lint
-```
-
-### Cost Engine (Go)
-
+**Backend:**
 ```bash
 cd cost-engine
-
-# Run tests
-go test ./...
-
-# Build
-go build -o cost-engine cmd/main.go
-
-# Run with verbose logging
-LOG_LEVEL=debug ./cost-engine estimate --dir ./examples
+go run cmd/main.go server --port 8080
 ```
 
----
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+# Visit http://localhost:5173
+```
 
-## Project Structure
+## Services
+
+### Frontend (Port 3000)
+- React 18 + TypeScript
+- Tailwind CSS
+- Nginx reverse proxy
+- Proxies `/api` to backend
+
+### Cost Engine (Port 8080)
+- Go HTTP server
+- Terraform parsing
+- Cost calculation
+- Policy evaluation
+
+### PostgreSQL (Port 5432)
+- AWS pricing data
+- Catalog versioning
+- Attribute mappings
+
+## Components
+
+### 1. Pricing Miner (Node.js)
+```bash
+cd pricing-miner
+npm run ingest lambda us-east-1
+```
+
+### 2. Cost Engine (Go)
+```bash
+cd cost-engine
+go run cmd/main.go estimate --plan plan.json
+```
+
+### 3. Frontend (React)
+- Upload Terraform projects
+- View cost estimates
+- Explainability panels
+- Diff viewer
+- Policy results
+
+## Docker Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f frontend
+docker-compose logs -f cost-engine
+
+# Rebuild specific service
+docker-compose up --build frontend
+
+# Stop all
+docker-compose down
+
+# Clean volumes
+docker-compose down -v
+```
+
+## Development Workflow
+
+1. **Start Database**
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+2. **Ingest Pricing Data**
+   ```bash
+   cd pricing-miner
+   npm run ingest lambda us-east-1
+   ```
+
+3. **Start Backend**
+   ```bash
+   cd cost-engine
+   go run cmd/main.go server
+   ```
+
+4. **Start Frontend**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+## Production Deployment
+
+### Build Images
+
+```bash
+# Build backend
+docker build -t aws-cost-engine:latest ./cost-engine
+
+# Build frontend
+docker build -t aws-cost-frontend:latest ./frontend
+```
+
+### Deploy
+
+```bash
+docker-compose -f docker-compose.yml up -d
+```
+
+## Environment Variables
+
+### Backend
+- `DATABASE_URL` - PostgreSQL connection string
+- `PORT` - Server port (default: 8080)
+- `EVALUATION_MODE` - STRICT/CONSERVATIVE/OPTIMISTIC
+- `CORS_ORIGINS` - Allowed CORS origins
+
+### Frontend
+- `VITE_API_BASE_URL` - Backend API URL
+
+## Architecture Principles
+
+### Non-Negotiable
+1. ✅ No silent defaults
+2. ✅ No hidden mocks
+3. ✅ No hardcoded pricing
+4. ✅ Determinism (same input = same output)
+5. ✅ Explainability (every dollar traceable)
+6. ✅ Auditability (full metadata)
+
+### Frontend Principles  
+1. ❌ No Terraform interpretation
+2. ❌ No file modification
+3. ❌ No directory flattening
+4. ✅ Backend is source of truth
+5. ✅ Structure preservation
+6. ✅ Full explainability
+
+## API Endpoints
+
+```
+POST   /api/estimate    - Upload Terraform ZIP
+POST   /api/diff        - Compare two projects
+POST   /api/policy      - Evaluate policies
+GET    /health          - Health check
+```
+
+## File Structure
 
 ```
 aws-cost-estimation/
+├── frontend/              # React UI
+│   ├── src/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── cost-engine/           # Go backend
+│   ├── cmd/
+│   ├── pkg/
+│   └── Dockerfile
+├── pricing-miner/         # Node.js pricing
+│   └── src/
 ├── database/
 │   └── migrations/
-│       └── 001_pricing_schema.sql    # PostgreSQL schema
-├── pricing-miner/                     # Brain 1 (Node.js)
-│   ├── src/
-│   │   ├── downloader.ts              # Streaming AWS Pricing API client
-│   │   ├── parser.ts                  # Streaming JSON parser
-│   │   ├── normalizer.ts              # Pricing normalization
-│   │   ├── ingestor.ts                # Orchestrator
-│   │   └── index.ts                   # CLI entry point
-│   ├── package.json
-│   └── Dockerfile
-├── cost-engine/                       # Brain 2 (Go)
-│   ├── cmd/
-│   │   ├── main.go
-│   │   └── commands/                  # CLI commands
-│   ├── pkg/
-│   │   ├── terraform/                 # Stage 1: Terraform loader
-│   │   ├── mocker/                    # Stage 2: Smart mocker
-│   │   ├── adapters/                  # Stage 3: Service adapters
-│   │   ├── pricing/                   # Stage 4: Pricing engine
-│   │   ├── engine/                    # Orchestrator
-│   │   ├── types/                     # Type definitions
-│   │   └── database/                  # Database client
-│   ├── go.mod
-│   └── Dockerfile
-├── docker-compose.yml
-└── README.md
+└── docker-compose.yml
 ```
 
----
+## Testing
 
-## FAQ
+### Backend
+```bash
+cd cost-engine
+go test ./...
+```
 
-### Q: Why two separate components (pricing-miner and cost-engine)?
-**A:** Separation of concerns. Pricing data ingestion is a heavyweight, offline process. Cost estimation is lightweight and real-time. Mixing them creates architectural debt.
+### Frontend
+```bash
+cd frontend
+npm run build
+```
 
-### Q: Why PostgreSQL instead of flat files?
-**A:** Pricing data has complex query patterns (tiered pricing, attribute matching, fallback logic). SQL is the right tool.
+## Troubleshooting
 
-### Q: Why Go for cost-engine instead of Node.js?
-**A:** Terraform tooling (HCL parsing, terraform-exec) has excellent Go support. Type safety and performance are critical for estimation logic.
+### Frontend can't reach backend
+- Check CORS_ORIGINS in cost-engine environment
+- Verify backend is running on port 8080
+- Check nginx proxy configuration
 
-### Q: How accurate are the estimates?
-**A:** For known resources with all attributes specified: **>95% accurate**. For resources with assumed usage (Lambda, S3): **explicitly flagged as LOW confidence**.
+### Database connection failed
+- Ensure PostgreSQL is running
+- Check DATABASE_URL
+- Verify network connectivity
 
-### Q: Can I override pricing?
-**A:** Yes (Stage 5 - planned). Enterprise pricing, Savings Plans, and Reserved Instances will be supported.
-
----
-
-## Contributing
-
-This is a production-grade platform. Contributions must:
-1. Follow all non-negotiable engineering principles
-2. Include tests
-3. Maintain determinism
-4. Never introduce silent defaults
-5. Update documentation
-
----
+### Upload fails
+- Check file size (max 500MB)
+- Verify Terraform files exist
+- Check backend logs
 
 ## License
 
 MIT
 
----
+## Contributing
 
-## Acknowledgments
-
-Built following enterprise FinOps and cloud cost management best practices. Inspired by Infracost, but architected for maximum accuracy and auditability.
-
-**Remember:** This is NOT a toy. Silent assumptions kill trust. Explicit confidence tracking builds it.
+1. Follow non-negotiable principles
+2. Include tests
+3. Maintain determinism
+4. Update documentation
