@@ -197,7 +197,7 @@ func (l *Loader) extractModuleResources(module *Module, prefix string, providerC
 		if prefix != "" {
 			childPrefix = prefix + "." + childPrefix
 		}
-		childResources := l.extractModuleResources(childModule, childPrefix, providerConfig)
+		childResources := l.extractModuleResources(&childModule, childPrefix, providerConfig)
 		resources = append(resources, childResources...)
 	}
 

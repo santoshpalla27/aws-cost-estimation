@@ -27,9 +27,6 @@ func (d *Differ) Diff(before, after *types.Estimate) *DetailedDiff {
 	beforeResources := d.buildResourceMap(before.Resources)
 	afterResources := d.buildResourceMap(after.Resources)
 
-	beforeCosts := d.buildCostMap(before.CostItems)
-	afterCosts := d.buildCostMap(after.CostItems)
-
 	// Find added resources
 	for addr, resource := range afterResources {
 		if _, exists := beforeResources[addr]; !exists {

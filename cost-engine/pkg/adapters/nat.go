@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"fmt"
+	
 	"github.com/aws-cost-estimation/cost-engine/pkg/types"
 )
 

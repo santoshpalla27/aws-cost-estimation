@@ -1,8 +1,6 @@
 package mocker
 
 import (
-	"fmt"
-
 	"github.com/aws-cost-estimation/cost-engine/pkg/types"
 	log "github.com/sirupsen/logrus"
 )

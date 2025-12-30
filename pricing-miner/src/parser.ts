@@ -1,12 +1,11 @@
 import * as fs from 'fs';
-// @ts-ignore - No type definitions available
-import { Chain } from 'stream-chain';
-// @ts-ignore - No type definitions available
-import { parser } from 'stream-json';
-// @ts-ignore - No type definitions available
-import { streamObject } from 'stream-json/streamers/StreamObject';
 import { logger } from './logger';
 import { ParsedPrice, AWSProduct, AWSTerm, AWSPriceDimension } from './types';
+
+// CommonJS imports for stream libraries
+const { chain } = require('stream-chain');
+const { parser } = require('stream-json');
+const { streamObject } = require('stream-json/streamers/StreamObject');
 
 export class Parser {
     /**
@@ -20,7 +19,7 @@ export class Parser {
         let productCount = 0;
         let priceCount = 0;
 
-        const pipeline = new Chain([
+        const pipeline = chain([
             fs.createReadStream(filePath, { highWaterMark: 65536 }),
             parser(),
             streamObject(),
