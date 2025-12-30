@@ -79,7 +79,7 @@ func (h *DiffHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Calculate diff
-	differ := diff.NewDiffer()
+	differ := diff.New()
 	diffResult := differ.Diff(&beforeEstimate.Estimate, &afterEstimate.Estimate)
 
 	log.WithFields(log.Fields{

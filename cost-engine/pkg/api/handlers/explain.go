@@ -4,8 +4,6 @@ import (
 	"net/http"
 
 	"github.com/aws-cost-estimation/cost-engine/pkg/config"
-	"github.com/aws-cost-estimation/cost-engine/pkg/explainability"
-	"github.com/aws-cost-estimation/cost-engine/pkg/types"
 )
 
 // ExplainHandler handles explainability requests
@@ -22,10 +20,6 @@ func NewExplainHandler(cfg *config.Config) *ExplainHandler {
 func (h *ExplainHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// This would integrate with the explainability engine
 	// For now, return a placeholder
-	explainer := explainability.NewExplainer()
-	
-	// TODO: Get cost item from request
-	// For now, return empty explanation
 	explanation := map[string]interface{}{
 		"message": "Explainability endpoint - integration pending",
 		"note":    "Use the detailed breakdown in the estimate response",

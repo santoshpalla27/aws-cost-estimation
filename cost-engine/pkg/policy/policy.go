@@ -1,7 +1,9 @@
 package policy
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws-cost-estimation/cost-engine/pkg/types"
 )
@@ -20,6 +22,22 @@ func New() *PolicyEngine {
 // LoadPolicies loads policy definitions
 func (pe *PolicyEngine) LoadPolicies(policies []Policy) {
 	pe.policies = policies
+}
+
+// LoadFromFile loads policies from a JSON file
+func (pe *PolicyEngine) LoadFromFile(filePath string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to read policy file: %w", err)
+	}
+
+	var policies []Policy
+	if err := json.Unmarshal(data, &policies); err != nil {
+		return fmt.Errorf("failed to parse policy JSON: %w", err)
+	}
+
+	pe.LoadPolicies(policies)
+	return nil
 }
 
 // Evaluate checks estimate against all policies
