@@ -1,0 +1,43 @@
+{
+    "policies": [
+        {
+            "name": "EC2 Budget Cap",
+            "type": "SERVICE_BUDGET",
+            "service": "AmazonEC2",
+            "max_cost": 2000.00,
+            "warn_threshold": 1600.00
+        },
+        {
+            "name": "RDS Budget Cap",
+            "type": "SERVICE_BUDGET",
+            "service": "AmazonRDS",
+            "max_cost": 1500.00,
+            "warn_threshold": 1200.00
+        },
+        {
+            "name": "Lambda Budget Cap",
+            "type": "SERVICE_BUDGET",
+            "service": "AWSLambda",
+            "max_cost": 500.00,
+            "warn_threshold": 400.00
+        },
+        {
+            "name": "Total Infrastructure Budget",
+            "type": "TOTAL_BUDGET",
+            "max_cost": 10000.00,
+            "warn_threshold": 8000.00
+        },
+        {
+            "name": "EC2 Instance Limit",
+            "type": "RESOURCE_COUNT",
+            "resource_type": "aws_instance",
+            "max_count": 20
+        },
+        {
+            "name": "RDS Instance Limit",
+            "type": "RESOURCE_COUNT",
+            "resource_type": "aws_db_instance",
+            "max_count": 5
+        }
+    ]
+}

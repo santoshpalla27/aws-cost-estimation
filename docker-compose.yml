@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL - Pricing Data Warehouse
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: aws-cost-db
+    environment:
+      POSTGRES_DB: aws_cost_estimation
+      POSTGRES_USER: cost_user
+      POSTGRES_PASSWORD: cost_password_dev_only
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cost_user -d aws_cost_estimation"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cost-network
+    restart: unless-stopped
+
+  # ============================================
+  # Brain 1: Pricing Miner (Node.js)
+  # Offline pricing data ingestion pipeline
+  # ============================================
+  pricing-miner:
+    build:
+      context: ./pricing-miner
+      dockerfile: Dockerfile
+    container_name: aws-cost-pricing-miner
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://cost_user:cost_password_dev_only@postgres:5432/aws_cost_estimation
+      LOG_LEVEL: info
+    volumes:
+      - ./pricing-miner:/app
+      - /app/node_modules
+      - pricing-cache:/app/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cost-network
+    # Pricing miner runs on-demand, not continuously
+    profiles:
+      - tools
+    command: ["node", "dist/index.js", "status"]
+
+  # ============================================
+  # Brain 2: Cost Engine (Go)
+  # Real-time Terraform interpretation
+  # ============================================
+  cost-engine:
+    build:
+      context: ./cost-engine
+      dockerfile: Dockerfile
+    container_name: aws-cost-engine
+    environment:
+      DATABASE_URL: postgresql://cost_user:cost_password_dev_only@postgres:5432/aws_cost_estimation
+      LOG_LEVEL: info
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./cost-engine:/app
+      - terraform-cache:/tmp/terraform
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cost-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # pgAdmin (Development only)
+  # ============================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aws-cost-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@awscost.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - cost-network
+    profiles:
+      - dev
+    restart: unless-stopped
+
+networks:
+  cost-network:
+    driver: bridge
+    name: aws-cost-network
+
+volumes:
+  postgres-data:
+    driver: local
+  pricing-cache:
+    driver: local
+  terraform-cache:
+    driver: local
