@@ -1,0 +1,48 @@
+{
+  "name": "@aws-cost/pricing-miner",
+  "version": "1.0.0",
+  "description": "Industry-grade AWS pricing data ETL pipeline",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "ingest": "tsx src/cli/ingest.ts",
+    "ingest:all": "tsx src/cli/ingest.ts --all",
+    "ingest:service": "tsx src/cli/ingest.ts --service",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "pg-copy-streams": "^6.0.6",
+    "stream-chain": "^2.2.5",
+    "stream-json": "^1.8.0",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "p-limit": "^5.0.0",
+    "p-retry": "^6.2.0",
+    "undici": "^6.6.2",
+    "commander": "^12.0.0",
+    "dotenv": "^16.3.1",
+    "ora": "^8.0.1",
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.10.9",
+    "@types/pg-copy-streams": "^1.2.5",
+    "@types/stream-chain": "^2.0.4",
+    "@types/stream-json": "^1.7.7",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.2.1",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "eslint": "^8.56.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
