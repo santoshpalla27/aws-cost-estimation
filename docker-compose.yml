@@ -18,7 +18,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cost_user -d aws_cost_estimation"]
+      test: [ "CMD-SHELL", "pg_isready -U cost_user -d aws_cost_estimation" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,7 +51,7 @@ services:
     # Pricing miner runs on-demand, not continuously
     profiles:
       - tools
-    command: ["node", "dist/index.js", "status"]
+    command: [ "node", "dist/index.js", "status" ]
 
   # ============================================
   # Brain 2: Cost Engine (Go)
@@ -66,6 +66,8 @@ services:
       DATABASE_URL: postgresql://cost_user:cost_password_dev_only@postgres:5432/aws_cost_estimation
       LOG_LEVEL: info
       PORT: 8080
+      EVALUATION_MODE: CONSERVATIVE
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
     ports:
       - "8080:8080"
     volumes:
@@ -77,8 +79,9 @@ services:
     networks:
       - cost-network
     restart: unless-stopped
+    command: [ "cost-engine", "server", "--port", "8080" ]
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3

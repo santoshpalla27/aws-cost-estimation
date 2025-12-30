@@ -6,9 +6,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "cost-engine",
-	Short: "AWS Cost Estimation Engine - Brain 2",
-	Long: `Production-grade Terraform-aware AWS cost estimation engine.
-Interprets Terraform configurations and produces accurate, explainable cost estimates.`,
+	Short: "AWS cost estimation engine",
+	Long:  `Production-grade AWS cost estimation from Terraform configurations`,
 }
 
 func Execute() error {
@@ -16,10 +15,11 @@ func Execute() error {
 }
 
 func init() {
-	// Add subcommands
+	// Register subcommands
 	rootCmd.AddCommand(estimateCmd)
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(explainCmd)
-	rootCmd.AddCommand(policyCmd)
 	rootCmd.AddCommand(healthCmd)
+	rootCmd.AddCommand(policyCmd)
+	rootCmd.AddCommand(serverCmd) // HTTP API server
 }
