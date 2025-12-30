@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/aws-cost-estimation/cost-engine/pkg/adapters"
