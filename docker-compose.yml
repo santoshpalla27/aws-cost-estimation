@@ -39,10 +39,10 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://cost_user:cost_password_dev_only@postgres:5432/aws_cost_estimation
       LOG_LEVEL: info
-    volumes:
-      - ./pricing-miner:/app
-      - /app/node_modules
-      - pricing-cache:/app/cache
+    # volumes:
+    #   - ./pricing-miner:/app
+    #   - /app/node_modules
+    #   - pricing-cache:/app/cache
     depends_on:
       postgres:
         condition: service_healthy
