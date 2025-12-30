@@ -5,10 +5,15 @@
  */
 
 import { Readable } from 'node:stream';
-import { parser } from 'stream-json';
-import { pick } from 'stream-json/filters/Pick.js';
-import { streamObject } from 'stream-json/streamers/StreamObject.js';
-import { chain } from 'stream-chain';
+import pkg from 'stream-json';
+import StreamJsonPick from 'stream-json/filters/Pick.js';
+import StreamJsonObject from 'stream-json/streamers/StreamObject.js';
+import StreamChain from 'stream-chain';
+
+const { parser } = pkg;
+const pick = StreamJsonPick.pick;
+const streamObject = StreamJsonObject.streamObject;
+const chain = StreamChain.chain;
 import { getPricingUrl, generateVersionHash, formatBytes } from '../aws/client.js';
 import { PricingNormalizer } from '../normalizers/dimension-normalizer.js';
 import { Rosetta } from '../metadata/rosetta.js';
