@@ -17,11 +17,20 @@ Industry-grade ETL pipeline for ingesting AWS pricing data from all services.
 
 ```bash
 # Start PostgreSQL and run ingestion for all services
-docker-compose up -d postgres
-docker-compose run pricing-miner ingest --all
+docker compose up -d postgres
+docker compose run pricing-miner ingest --all
+
+# Start PostgreSQL first
+docker compose up -d postgres
+
+# Run pricing-miner in detached mode for all services
+docker compose up -d pricing-miner
+
+# Or if you want to run it as a one-off with specific options:
+docker compose run -d pricing-miner ingest --all
 
 # Or ingest specific services
-docker-compose run pricing-miner ingest -s AmazonEC2 AmazonRDS AWSLambda
+docker compose run pricing-miner ingest -s AmazonEC2 AmazonRDS AWSLambda
 ```
 
 ### Local Development

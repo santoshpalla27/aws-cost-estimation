@@ -42,6 +42,9 @@ services:
       LOG_PRETTY: "false"
       INGESTION_CONCURRENCY: 5
       INGESTION_BATCH_SIZE: 10000
+    volumes:
+      - pricing_miner_data:/app/data
+      - pricing_miner_logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +73,8 @@ services:
 
 volumes:
   postgres_data:
+  pricing_miner_data:
+  pricing_miner_logs:
 
 
 networks:
