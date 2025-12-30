@@ -33,6 +33,90 @@ program
         }
     });
 
+// Ingest-all command
+program
+    .command('ingest-all')
+    .description('Automatically discover and ingest ALL AWS services')
+    .argument('<region>', 'AWS region (e.g., us-east-1)')
+    .option('--essential-only', 'Ingest only essential services (faster)')
+    .option('--continue-on-error', 'Continue even if individual services fail')
+    .action(async (region: string, options: any) => {
+        try {
+            const { ServiceDiscovery } = await import('./serviceDiscovery');
+            const discovery = new ServiceDiscovery();
+            const ingestor = new Ingestor();
+
+            console.log(chalk.cyan.bold('\n═══════════════════════════════════════'));
+            console.log(chalk.cyan.bold('  AWS Pricing Auto-Ingestion'));
+            console.log(chalk.cyan.bold('═══════════════════════════════════════\n'));
+
+            // Get service list
+            let services: string[];
+            if (options.essentialOnly) {
+                services = discovery.getEssentialServices();
+                console.log(chalk.yellow(`Mode: Essential services only (${services.length} services)\n`));
+            } else {
+                services = await discovery.discoverAllServices();
+                console.log(chalk.yellow(`Mode: All available services (${services.length} services)\n`));
+            }
+
+            console.log(chalk.cyan(`Region: ${region}`));
+            console.log(chalk.cyan(`Continue on error: ${options.continueOnError ? 'Yes' : 'No'}\n`));
+
+            let successful = 0;
+            let failed = 0;
+            const failedServices: string[] = [];
+
+            for (let i = 0; i < services.length; i++) {
+                const service = services[i];
+                const progress = `[${i + 1}/${services.length}]`;
+
+                console.log(chalk.blue(`\n${progress} Processing: ${service}`));
+                console.log(chalk.gray('─'.repeat(50)));
+
+                try {
+                    await ingestor.ingest(service, region);
+                    successful++;
+                    console.log(chalk.green(`✓ ${service} completed successfully`));
+                } catch (error: any) {
+                    failed++;
+                    failedServices.push(service);
+
+                    if (options.continueOnError) {
+                        console.log(chalk.yellow(`⚠ ${service} failed: ${error.message}`));
+                        console.log(chalk.yellow(`  Continuing to next service...`));
+                    } else {
+                        console.log(chalk.red(`✗ ${service} failed: ${error.message}`));
+                        console.log(chalk.red(`\nAborting. Use --continue-on-error to skip failures.`));
+                        throw error;
+                    }
+                }
+            }
+
+            // Summary
+            console.log(chalk.cyan.bold('\n═══════════════════════════════════════'));
+            console.log(chalk.cyan.bold('  Ingestion Complete!'));
+            console.log(chalk.cyan.bold('═══════════════════════════════════════\n'));
+            console.log(chalk.green(`✓ Successful: ${successful}/${services.length}`));
+
+            if (failed > 0) {
+                console.log(chalk.yellow(`⚠ Failed: ${failed}/${services.length}`));
+                console.log(chalk.gray('\nFailed services:'));
+                failedServices.forEach(s => console.log(chalk.gray(`  - ${s}`)));
+            }
+
+            console.log(chalk.cyan('\nRun "status" command to verify ingested data\n'));
+
+            process.exit(failed > 0 && !options.continueOnError ? 1 : 0);
+        } catch (error: any) {
+            console.error(chalk.red(`\n✗ Error: ${error.message}`));
+            logger.error('Batch ingestion failed', { error: error.stack });
+            process.exit(1);
+        } finally {
+            await database.close();
+        }
+    });
+
 // Status command
 program
     .command('status')
