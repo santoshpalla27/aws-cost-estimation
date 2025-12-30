@@ -40,8 +40,16 @@ services:
       DB_PASSWORD: postgres
       LOG_LEVEL: info
       LOG_PRETTY: "false"
-      INGESTION_CONCURRENCY: 5
-      INGESTION_BATCH_SIZE: 10000
+      INGESTION_CONCURRENCY: 3
+      INGESTION_BATCH_SIZE: 5000
+      # Increase Node.js heap size for large files
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
     volumes:
       - pricing_miner_data:/app/data
       - pricing_miner_logs:/app/logs
