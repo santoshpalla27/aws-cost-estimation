@@ -62,7 +62,7 @@ export const config: Config = {
     aws: {
         pricingBaseUrl: getEnv('AWS_PRICING_BASE_URL', 'https://pricing.us-east-1.amazonaws.com'),
         offerIndexPath: getEnv('AWS_OFFER_INDEX_PATH', '/offers/v1.0/aws/index.json'),
-        requestTimeout: getEnvInt('AWS_REQUEST_TIMEOUT', 900000), // 15 minutes for large files
+        requestTimeout: getEnvInt('AWS_REQUEST_TIMEOUT', 3600000), // 60 minutes for large files like EC2
         maxRetries: getEnvInt('AWS_MAX_RETRIES', 3),
     },
 
