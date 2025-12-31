@@ -38,6 +38,15 @@ import type {
 // Threshold for using streaming (20MB)
 const STREAMING_THRESHOLD_BYTES = 20 * 1024 * 1024;
 
+// Regions to ingest (filter out less common regions to save memory)
+// For EC2's 7GB file, we filter to essential regions only
+const ALLOWED_REGIONS = new Set([
+    'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+    'eu-west-1', 'eu-west-2', 'eu-central-1',
+    'ap-south-1', 'ap-southeast-1', 'ap-northeast-1',
+    'global', 'Global', 'Any',
+]);
+
 /**
  * Ingest pricing data for a single AWS service
  */
@@ -207,8 +216,9 @@ async function processServiceWithStreaming(
     const nodeStream = Readable.fromWeb(response.body as import('node:stream/web').ReadableStream);
 
     // Phase 1: Stream and collect products
-    log.info('Phase 1: Streaming products');
+    log.info('Phase 1: Streaming products (filtering by region)');
     const productMap = new Map<string, Product>();
+    let skippedByRegion = 0;
 
     await new Promise<void>((resolve, reject) => {
         const productPipeline = chain([
@@ -219,16 +229,39 @@ async function processServiceWithStreaming(
         ]);
 
         productPipeline.on('data', ({ key, value }: { key: string; value: Product }) => {
-            const product = { ...value, sku: key };
-            productMap.set(key, product);
-            rosetta.learnFromProduct(product);
+            // Filter by region to save memory for large files like EC2
+            const region = value.attributes?.regionCode ??
+                value.attributes?.region ??
+                value.attributes?.location ?? 'global';
+
+            // Check if region is in allowed list
+            let isAllowedRegion = ALLOWED_REGIONS.has(region);
+
+            // Also check location-based regions (e.g., "US East (N. Virginia)")
+            if (!isAllowedRegion && value.attributes?.location) {
+                const loc = value.attributes.location;
+                if (loc.includes('US East') || loc.includes('US West') ||
+                    loc.includes('EU (') || loc.includes('Europe') ||
+                    loc.includes('Mumbai') || loc.includes('Singapore') ||
+                    loc.includes('Tokyo') || loc.includes('Any')) {
+                    isAllowedRegion = true;
+                }
+            }
+
+            if (isAllowedRegion) {
+                const product = { ...value, sku: key };
+                productMap.set(key, product);
+                rosetta.learnFromProduct(product);
+            } else {
+                skippedByRegion++;
+            }
         });
 
         productPipeline.on('end', () => resolve());
         productPipeline.on('error', (err: Error) => reject(err));
     });
 
-    log.info({ productCount: productMap.size }, 'Products loaded into memory');
+    log.info({ productCount: productMap.size, skippedByRegion }, 'Products loaded (filtered by region)');
 
     // Add products to normalizer
     for (const product of productMap.values()) {
