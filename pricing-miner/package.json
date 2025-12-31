@@ -36,6 +36,7 @@
     "@types/pg-copy-streams": "^1.2.5",
     "@types/stream-chain": "^2.0.4",
     "@types/stream-json": "^1.7.7",
+    "@types/better-sqlite3": "^7.6.8",
     "typescript": "^5.3.3",
     "tsx": "^4.7.0",
     "vitest": "^1.2.1",
