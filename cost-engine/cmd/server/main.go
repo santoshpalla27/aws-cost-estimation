@@ -5,7 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/json"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -14,8 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"crypto/sha256"
-	"encoding/hex"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
