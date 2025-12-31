@@ -101,7 +101,81 @@ func (s *Server) setupRouter() {
 	{
 		api.POST("/estimate", s.estimateHandler)
 		api.POST("/estimate/terraform", s.estimateTerraformHandler)
+		
+		// Debug endpoints
+		api.GET("/debug/services", s.debugServicesHandler)
+		api.GET("/debug/sample/:service", s.debugSampleHandler)
 	}
+}
+
+// debugServicesHandler lists ingested services
+func (s *Server) debugServicesHandler(c *gin.Context) {
+	ctx := c.Request.Context()
+	rows, err := s.pool.Query(ctx, `
+		SELECT service, record_count, status, ingested_at 
+		FROM catalog_versions 
+		WHERE status = 'completed'
+		ORDER BY service
+	`)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var services []map[string]interface{}
+	for rows.Next() {
+		var service, status string
+		var recordCount int
+		var ingestedAt interface{}
+		rows.Scan(&service, &recordCount, &status, &ingestedAt)
+		services = append(services, map[string]interface{}{
+			"service":      service,
+			"record_count": recordCount,
+			"status":       status,
+			"ingested_at":  ingestedAt,
+		})
+	}
+	c.JSON(200, services)
+}
+
+// debugSampleHandler shows sample pricing data for a service
+func (s *Server) debugSampleHandler(c *gin.Context) {
+	service := c.Param("service")
+	ctx := c.Request.Context()
+	
+	rows, err := s.pool.Query(ctx, `
+		SELECT region_code, usage_type, unit, price_per_unit, 
+		       attributes->>'instanceType' as instance_type,
+		       attributes->>'operatingSystem' as os
+		FROM pricing_dimensions 
+		WHERE service = $1 
+		  AND term_type = 'OnDemand'
+		  AND price_per_unit > 0
+		LIMIT 20
+	`, service)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var samples []map[string]interface{}
+	for rows.Next() {
+		var regionCode, usageType, unit string
+		var price float64
+		var instanceType, os *string
+		rows.Scan(&regionCode, &usageType, &unit, &price, &instanceType, &os)
+		samples = append(samples, map[string]interface{}{
+			"region_code":   regionCode,
+			"usage_type":    usageType,
+			"unit":          unit,
+			"price":         price,
+			"instance_type": instanceType,
+			"os":            os,
+		})
+	}
+	c.JSON(200, gin.H{"service": service, "samples": samples})
 }
 
 // healthHandler returns server health status
