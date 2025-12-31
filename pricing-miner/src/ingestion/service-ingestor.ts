@@ -20,6 +20,7 @@ const streamObject = StreamJsonObject.streamObject;
 const chain = StreamChain.chain;
 import { getPricingUrl, generateVersionHash, formatBytes } from '../aws/client.js';
 import { PricingNormalizer } from '../normalizers/dimension-normalizer.js';
+import { LowMemoryNormalizer } from '../normalizers/low-memory-normalizer.js';
 import { Rosetta } from '../metadata/rosetta.js';
 import {
     upsertCatalogVersion,
@@ -99,15 +100,22 @@ export async function ingestService(offer: OfferEntry): Promise<IngestionResult>
 
         log.info({ catalogVersionId, versionHash }, 'Created catalog version');
 
-        // Initialize normalizer and rosetta
-        const normalizer = new PricingNormalizer(service, catalogVersionId);
+        // Initialize rosetta (metadata learner)
         const rosetta = new Rosetta(service, catalogVersionId);
 
         // Choose processing method based on file size
+        // Large files use LowMemoryNormalizer (SQLite-based) to avoid OOM
         if (contentLength > STREAMING_THRESHOLD_BYTES) {
-            log.info({ threshold: formatBytes(STREAMING_THRESHOLD_BYTES) }, 'Using streaming mode for large file');
-            recordCount = await processServiceWithStreaming(url, normalizer, rosetta, log);
+            log.info({ threshold: formatBytes(STREAMING_THRESHOLD_BYTES) }, 'Using low-memory streaming mode (SQLite-backed)');
+            const lowMemNormalizer = new LowMemoryNormalizer(service, catalogVersionId);
+            try {
+                recordCount = await processServiceWithLowMemory(url, lowMemNormalizer, rosetta, log);
+            } finally {
+                lowMemNormalizer.close(); // Cleanup SQLite temp file
+            }
         } else {
+            // Small files use in-memory PricingNormalizer
+            const normalizer = new PricingNormalizer(service, catalogVersionId);
             recordCount = await processServiceWithFetch(url, normalizer, rosetta, log);
         }
 
@@ -122,14 +130,12 @@ export async function ingestService(offer: OfferEntry): Promise<IngestionResult>
         await updateCatalogVersionStatus(catalogVersionId, 'completed', recordCount);
 
         const duration = Date.now() - startTime;
-        const stats = normalizer.getStats();
         const rosettaStats = rosetta.getStats();
 
         log.info(
             {
                 recordCount,
                 duration: `${(duration / 1000).toFixed(1)}s`,
-                stats,
                 rosettaStats,
             },
             'Service ingestion completed'
@@ -140,7 +146,6 @@ export async function ingestService(offer: OfferEntry): Promise<IngestionResult>
             catalogVersionId,
             recordCount,
             duration,
-            stats,
             rosettaStats,
             timestamp: new Date().toISOString(),
         });
@@ -187,13 +192,13 @@ export async function ingestService(offer: OfferEntry): Promise<IngestionResult>
 }
 
 /**
- * Process large files using disk-based approach
- * Downloads file to disk first, then processes from local file
- * This allows ALL data to be processed without memory issues
+ * Process large files using disk-based approach with SQLite product storage
+ * Downloads file to disk first, stores products in SQLite (not RAM)
+ * This allows processing of 7GB+ files on 8GB servers
  */
-async function processServiceWithStreaming(
+async function processServiceWithLowMemory(
     url: string,
-    normalizer: PricingNormalizer,
+    normalizer: LowMemoryNormalizer,
     rosetta: Rosetta,
     log: ReturnType<typeof createIngestionLogger>
 ): Promise<number> {
@@ -220,9 +225,9 @@ async function processServiceWithStreaming(
         await pipeline(nodeStream, writeStream);
         log.info({ path: tempFilePath }, 'Downloaded pricing file to disk');
 
-        // Phase 1: Stream products from disk file
-        log.info('Phase 1: Streaming products from disk (ALL data, no filtering)');
-        const productMap = new Map<string, Product>();
+        // Phase 1: Stream products from disk, store in SQLite (not RAM)
+        log.info('Phase 1: Streaming products from disk to SQLite');
+        let productCount = 0;
 
         await new Promise<void>((resolve, reject) => {
             const fileStream = createReadStream(tempFilePath);
@@ -235,23 +240,21 @@ async function processServiceWithStreaming(
 
             productPipeline.on('data', ({ key, value }: { key: string; value: Product }) => {
                 const product = { ...value, sku: key };
-                productMap.set(key, product);
+                normalizer.addProduct(product); // Stores in SQLite, not RAM!
                 rosetta.learnFromProduct(product);
+                productCount++;
+
+                // Log progress every 50000 products
+                if (productCount % 50000 === 0) {
+                    log.info({ productCount }, 'Products loaded to SQLite');
+                }
             });
 
             productPipeline.on('end', () => resolve());
             productPipeline.on('error', (err: Error) => reject(err));
         });
 
-        log.info({ productCount: productMap.size }, 'Products loaded from disk');
-
-        // Add products to normalizer
-        for (const product of productMap.values()) {
-            normalizer.addProduct(product);
-        }
-
-        // Clear productMap to free memory (normalizer has its own copy)
-        productMap.clear();
+        log.info({ productCount: normalizer.getProductCount() }, 'Products stored in SQLite');
 
         // Phase 2: Stream OnDemand terms from disk file
         let totalDimensions = 0;

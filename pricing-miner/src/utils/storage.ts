@@ -34,7 +34,7 @@ export async function saveIngestionSummary(
         catalogVersionId: number;
         recordCount: number;
         duration: number;
-        stats: Record<string, unknown>;
+        stats?: Record<string, unknown>;
         rosettaStats: Record<string, unknown>;
         timestamp: string;
     }
