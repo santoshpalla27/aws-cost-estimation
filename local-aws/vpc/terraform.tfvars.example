@@ -1,0 +1,27 @@
+# terraform.tfvars.example
+# Copy this file to terraform.tfvars and customize
+
+aws_region  = "us-east-1"
+vpc_name    = "my-vpc"
+vpc_cidr    = "10.0.0.0/16"
+environment = "development" # or "production"
+
+# Subnet Configuration
+public_subnet_count      = 3
+private_app_subnet_count = 3
+private_db_subnet_count  = 3
+isolated_subnet_count    = 0
+
+# NAT Gateway
+enable_nat_gateway = true
+
+# Database Routing (SECURITY: Keep both false for production)
+enable_database_nat_gateway      = false
+enable_database_internet_gateway = false
+
+# Tags
+tags = {
+  Project    = "MyProject"
+  Owner      = "DevOps Team"
+  CostCenter = "Engineering"
+}

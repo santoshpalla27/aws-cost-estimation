@@ -396,6 +396,12 @@ func (s *Server) processHCL(hcl string) (*types.TerraformPlan, string, error) {
 func (s *Server) generateEstimate(ctx context.Context, plan *types.TerraformPlan, region string, inputHash string) (*types.CostEstimate, error) {
 	var allVectors []types.UsageVector
 
+	// Log parsing results
+	log.Printf("Parsed %d resources from Terraform files", len(plan.Resources))
+	for _, res := range plan.Resources {
+		log.Printf("  - %s (%s)", res.Address, res.Type)
+	}
+
 	// Convert resources to usage vectors using registry
 	for _, resource := range plan.Resources {
 		// First try the new matcher registry
@@ -404,6 +410,7 @@ func (s *Server) generateEstimate(ctx context.Context, plan *types.TerraformPlan
 			if err != nil {
 				log.Printf("Warning: matcher error for %s: %v", resource.Type, err)
 			} else {
+				log.Printf("Matched %s with %d usage vectors", resource.Address, len(vectors))
 				allVectors = append(allVectors, vectors...)
 				continue
 			}
@@ -412,6 +419,7 @@ func (s *Server) generateEstimate(ctx context.Context, plan *types.TerraformPlan
 		// Fallback to legacy EC2 adapter
 		if s.ec2Adapter.CanHandle(resource.Type) {
 			vectors := s.ec2Adapter.Adapt(resource, region)
+			log.Printf("Legacy adapter matched %s with %d usage vectors", resource.Address, len(vectors))
 			allVectors = append(allVectors, vectors...)
 		}
 	}
