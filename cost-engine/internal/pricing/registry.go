@@ -43,6 +43,7 @@ func NewMatcherRegistry(pool *pgxpool.Pool) *MatcherRegistry {
 	registry.Register(matchers.NewDynamoDBMatcher(pool))
 	registry.Register(matchers.NewElastiCacheMatcher(pool))
 	registry.Register(matchers.NewEKSMatcher(pool))
+	registry.Register(matchers.NewVPCMatcher(pool))
 
 	log.Printf("Registered %d service matchers", len(registry.matchers))
 	return registry
