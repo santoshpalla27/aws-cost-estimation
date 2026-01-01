@@ -11,11 +11,20 @@ services:
       POSTGRES_DB: pricing
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      # Increase max connections for large ingestion jobs
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init:/docker-entrypoint-initdb.d
+      - ./backups:/backups # Mount for pg_dump exports
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
