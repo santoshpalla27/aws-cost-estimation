@@ -170,6 +170,12 @@ func (l *Loader) parseResource(block *hclsyntax.Block, plan *types.TerraformPlan
 	// Extract attributes
 	for attrName, attr := range block.Body.Attributes {
 		val, _ := attr.Expr.Value(l.evalCtx)
+		
+		// Skip unknown values (e.g., variables without defaults, computed values)
+		if !val.IsKnown() {
+			continue
+		}
+		
 		resource.Config[attrName] = ctyToGo(val)
 
 		// Handle count
@@ -187,6 +193,12 @@ func (l *Loader) parseResource(block *hclsyntax.Block, plan *types.TerraformPlan
 		blockConfig := make(map[string]interface{})
 		for attrName, attr := range nestedBlock.Body.Attributes {
 			val, _ := attr.Expr.Value(l.evalCtx)
+			
+			// Skip unknown values
+			if !val.IsKnown() {
+				continue
+			}
+			
 			blockConfig[attrName] = ctyToGo(val)
 		}
 
@@ -220,6 +232,12 @@ func (l *Loader) parseDataSource(block *hclsyntax.Block, plan *types.TerraformPl
 
 	for attrName, attr := range block.Body.Attributes {
 		val, _ := attr.Expr.Value(l.evalCtx)
+		
+		// Skip unknown values
+		if !val.IsKnown() {
+			continue
+		}
+		
 		dataSource.Config[attrName] = ctyToGo(val)
 	}
 
@@ -236,6 +254,12 @@ func (l *Loader) parseOutput(block *hclsyntax.Block, plan *types.TerraformPlan) 
 	for attrName, attr := range block.Body.Attributes {
 		if attrName == "value" {
 			val, _ := attr.Expr.Value(l.evalCtx)
+			
+			// Skip unknown values
+			if !val.IsKnown() {
+				continue
+			}
+			
 			plan.Outputs[name] = ctyToGo(val)
 		}
 	}
