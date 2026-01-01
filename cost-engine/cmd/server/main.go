@@ -37,6 +37,7 @@ type Server struct {
 	loader     *terraform.Loader
 	ec2Adapter *adapters.EC2Adapter
 	matcher    *pricing.Matcher
+	registry   *pricing.MatcherRegistry
 	aggregator *aggregation.Aggregator
 	router     *gin.Engine
 }
@@ -73,6 +74,7 @@ func main() {
 		loader:     terraform.NewLoader(),
 		ec2Adapter: adapters.NewEC2Adapter(),
 		matcher:    pricing.NewMatcher(pool),
+		registry:   pricing.NewMatcherRegistry(pool),
 		aggregator: aggregation.NewAggregator(),
 	}
 
@@ -394,14 +396,24 @@ func (s *Server) processHCL(hcl string) (*types.TerraformPlan, string, error) {
 func (s *Server) generateEstimate(ctx context.Context, plan *types.TerraformPlan, region string, inputHash string) (*types.CostEstimate, error) {
 	var allVectors []types.UsageVector
 
-	// Convert resources to usage vectors
+	// Convert resources to usage vectors using registry
 	for _, resource := range plan.Resources {
-		// Try EC2 adapter
+		// First try the new matcher registry
+		if matcher := s.registry.FindMatcher(resource.Type); matcher != nil {
+			vectors, err := matcher.Match(ctx, resource, region)
+			if err != nil {
+				log.Printf("Warning: matcher error for %s: %v", resource.Type, err)
+			} else {
+				allVectors = append(allVectors, vectors...)
+				continue
+			}
+		}
+
+		// Fallback to legacy EC2 adapter
 		if s.ec2Adapter.CanHandle(resource.Type) {
 			vectors := s.ec2Adapter.Adapt(resource, region)
 			allVectors = append(allVectors, vectors...)
 		}
-		// TODO: Add more adapters for RDS, S3, Lambda, etc.
 	}
 
 	// Match vectors to prices
